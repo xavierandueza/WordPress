@@ -272,35 +272,6 @@ switch ( $action ) {
 		);
 		exit;
 
-	case 'untrash':
-		check_admin_referer( 'untrash-post_' . $post_id );
-
-		if ( ! $post ) {
-			wp_die( __( 'The item you are trying to restore from the Trash no longer exists.' ), 410 );
-		}
-
-		if ( ! $post_type_object ) {
-			wp_die( __( 'Invalid post type.' ), 400 );
-		}
-
-		if ( ! current_user_can( 'delete_post', $post_id ) ) {
-			wp_die( __( 'Sorry, you are not allowed to restore this item from the Trash.' ), 403 );
-		}
-
-		if ( ! wp_untrash_post( $post_id ) ) {
-			wp_die( __( 'Error in restoring the item from Trash.' ), 500 );
-		}
-
-		$sendback = add_query_arg(
-			array(
-				'untrashed' => 1,
-				'ids'       => $post_id,
-			),
-			$sendback
-		);
-		wp_redirect( $sendback );
-		exit;
-
 	case 'delete':
 		check_admin_referer( 'delete-post_' . $post_id );
 

@@ -1512,15 +1512,7 @@ class WP_Posts_List_Table extends WP_List_Table {
 		}
 
 		if ( current_user_can( 'delete_post', $post->ID ) ) {
-			if ( 'trash' === $post->post_status ) {
-				$actions['untrash'] = sprintf(
-					'<a href="%s" aria-label="%s">%s</a>',
-					wp_nonce_url( admin_url( sprintf( $post_type_object->_edit_link . '&amp;action=untrash', $post->ID ) ), 'untrash-post_' . $post->ID ),
-					/* translators: %s: Post title. */
-					esc_attr( sprintf( __( 'Restore &#8220;%s&#8221; from the Trash' ), $title ) ),
-					__( 'Restore' )
-				);
-			} elseif ( EMPTY_TRASH_DAYS ) {
+			if ( 'trash' !== $post->post_status && EMPTY_TRASH_DAYS ) {
 				$actions['trash'] = sprintf(
 					'<a href="%s" class="submitdelete" aria-label="%s">%s</a>',
 					get_delete_post_link( $post->ID ),

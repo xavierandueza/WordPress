@@ -144,29 +144,6 @@ if ( $doaction ) {
 				$sendback
 			);
 			break;
-		case 'untrash':
-			$untrashed = 0;
-
-			if ( isset( $_GET['doaction'] ) && ( 'undo' === $_GET['doaction'] ) ) {
-				add_filter( 'wp_untrash_post_status', 'wp_untrash_post_set_previous_status', 10, 3 );
-			}
-
-			foreach ( (array) $post_ids as $post_id ) {
-				if ( ! current_user_can( 'delete_post', $post_id ) ) {
-					wp_die( __( 'Sorry, you are not allowed to restore this item from the Trash.' ) );
-				}
-
-				if ( ! wp_untrash_post( $post_id ) ) {
-					wp_die( __( 'Error in restoring the item from Trash.' ) );
-				}
-
-				++$untrashed;
-			}
-			$sendback = add_query_arg( 'untrashed', $untrashed, $sendback );
-
-			remove_filter( 'wp_untrash_post_status', 'wp_untrash_post_set_previous_status', 10 );
-
-			break;
 		case 'delete':
 			$deleted = 0;
 			foreach ( (array) $post_ids as $post_id ) {
@@ -364,8 +341,6 @@ $bulk_messages['post']     = array(
 	'deleted'   => _n( '%s post permanently deleted.', '%s posts permanently deleted.', $bulk_counts['deleted'] ),
 	/* translators: %s: Number of posts. */
 	'trashed'   => _n( '%s post moved to the Trash.', '%s posts moved to the Trash.', $bulk_counts['trashed'] ),
-	/* translators: %s: Number of posts. */
-	'untrashed' => _n( '%s post restored from the Trash.', '%s posts restored from the Trash.', $bulk_counts['untrashed'] ),
 );
 $bulk_messages['page']     = array(
 	/* translators: %s: Number of pages. */
@@ -377,8 +352,6 @@ $bulk_messages['page']     = array(
 	'deleted'   => _n( '%s page permanently deleted.', '%s pages permanently deleted.', $bulk_counts['deleted'] ),
 	/* translators: %s: Number of pages. */
 	'trashed'   => _n( '%s page moved to the Trash.', '%s pages moved to the Trash.', $bulk_counts['trashed'] ),
-	/* translators: %s: Number of pages. */
-	'untrashed' => _n( '%s page restored from the Trash.', '%s pages restored from the Trash.', $bulk_counts['untrashed'] ),
 );
 $bulk_messages['wp_block'] = array(
 	/* translators: %s: Number of patterns. */
@@ -390,8 +363,6 @@ $bulk_messages['wp_block'] = array(
 	'deleted'   => _n( '%s pattern permanently deleted.', '%s patterns permanently deleted.', $bulk_counts['deleted'] ),
 	/* translators: %s: Number of patterns. */
 	'trashed'   => _n( '%s pattern moved to the Trash.', '%s patterns moved to the Trash.', $bulk_counts['trashed'] ),
-	/* translators: %s: Number of patterns. */
-	'untrashed' => _n( '%s pattern restored from the Trash.', '%s patterns restored from the Trash.', $bulk_counts['untrashed'] ),
 );
 
 /**
@@ -443,16 +414,6 @@ foreach ( $bulk_counts as $message => $count ) {
 		$messages[] = sprintf( $bulk_messages[ $post_type ][ $message ], number_format_i18n( $count ) );
 	} elseif ( isset( $bulk_messages['post'][ $message ] ) ) {
 		$messages[] = sprintf( $bulk_messages['post'][ $message ], number_format_i18n( $count ) );
-	}
-
-	if ( 'trashed' === $message && isset( $_REQUEST['ids'] ) ) {
-		$ids = preg_replace( '/[^0-9,]/', '', $_REQUEST['ids'] );
-
-		$messages[] = sprintf(
-			'<a href="%1$s">%2$s</a>',
-			esc_url( wp_nonce_url( "edit.php?post_type=$post_type&doaction=undo&action=untrash&ids=$ids", 'bulk-posts' ) ),
-			__( 'Undo' )
-		);
 	}
 
 	if ( 'untrashed' === $message && isset( $_REQUEST['ids'] ) ) {

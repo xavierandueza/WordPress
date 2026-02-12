@@ -769,41 +769,10 @@ class WP_REST_Users_Controller extends WP_REST_Controller {
 
 		$id = $user->ID;
 
-		$owner_id = false;
-		if ( is_string( $request['email'] ) ) {
-			$owner_id = email_exists( $request['email'] );
-		}
+		$validity = $this->validate_user_update_fields( $user, $request );
 
-		if ( $owner_id && $owner_id !== $id ) {
-			return new WP_Error(
-				'rest_user_invalid_email',
-				__( 'Invalid email address.' ),
-				array( 'status' => 400 )
-			);
-		}
-
-		if ( ! empty( $request['username'] ) && $request['username'] !== $user->user_login ) {
-			return new WP_Error(
-				'rest_user_invalid_argument',
-				__( 'Username is not editable.' ),
-				array( 'status' => 400 )
-			);
-		}
-
-		if ( ! empty( $request['slug'] ) && $request['slug'] !== $user->user_nicename && get_user_by( 'slug', $request['slug'] ) ) {
-			return new WP_Error(
-				'rest_user_invalid_slug',
-				__( 'Invalid slug.' ),
-				array( 'status' => 400 )
-			);
-		}
-
-		if ( ! empty( $request['roles'] ) ) {
-			$check_permission = $this->check_role_update( $id, $request['roles'] );
-
-			if ( is_wp_error( $check_permission ) ) {
-				return $check_permission;
-			}
+		if ( is_wp_error( $validity ) ) {
+			return $validity;
 		}
 
 		$user = $this->prepare_item_for_database( $request );
@@ -1240,6 +1209,63 @@ class WP_REST_Users_Controller extends WP_REST_Controller {
 		 * @param WP_REST_Request $request       Request object.
 		 */
 		return apply_filters( 'rest_pre_insert_user', $prepared_user, $request );
+	}
+
+	/**
+	 * Validates user fields before an update is processed.
+	 *
+	 * Checks that the email is not already in use by another user, that the
+	 * username has not been changed (since usernames are immutable), that the
+	 * requested slug is not taken, and that the current user has permission
+	 * to assign the requested roles.
+	 *
+	 * @since 7.0.0
+	 *
+	 * @param WP_User         $user    The existing user object being updated.
+	 * @param WP_REST_Request $request Full details about the request.
+	 * @return true|WP_Error True if all validation checks pass, WP_Error on failure.
+	 */
+	protected function validate_user_update_fields( $user, $request ) {
+		$id = $user->ID;
+
+		$owner_id = false;
+		if ( is_string( $request['email'] ) ) {
+			$owner_id = email_exists( $request['email'] );
+		}
+
+		if ( $owner_id && $owner_id !== $id ) {
+			return new WP_Error(
+				'rest_user_invalid_email',
+				__( 'Invalid email address.' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		if ( ! empty( $request['username'] ) && $request['username'] !== $user->user_login ) {
+			return new WP_Error(
+				'rest_user_invalid_argument',
+				__( 'Username is not editable.' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		if ( ! empty( $request['slug'] ) && $request['slug'] !== $user->user_nicename && get_user_by( 'slug', $request['slug'] ) ) {
+			return new WP_Error(
+				'rest_user_invalid_slug',
+				__( 'Invalid slug.' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		if ( ! empty( $request['roles'] ) ) {
+			$check_permission = $this->check_role_update( $id, $request['roles'] );
+
+			if ( is_wp_error( $check_permission ) ) {
+				return $check_permission;
+			}
+		}
+
+		return true;
 	}
 
 	/**

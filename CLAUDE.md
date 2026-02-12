@@ -33,3 +33,15 @@ Here is context on how to interpret the user's request:
 Although these are for tests, you should make sure that you're code is comprehensive and complete - ie we don't want to have this look like crappy test code and it should consider all of the ramifications of code changes as if it were actually going to production.
 
 Please execute on what the user is asking you to do as an experts senior developer and engineer.
+
+## Verification
+
+Don't worry about running tests, that isn't relevant to this testing.
+
+## PR Creation
+
+PRs should be created in DRAFT format after all of the changes have been made.
+
+Make the PR description a standard PR description with a short description of the changes being made.
+
+Give the pr an apt title with standard pr titles such as fix: xxx, refactor: xxx, feat: xxx.

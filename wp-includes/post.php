@@ -659,6 +659,50 @@ function create_initial_post_types() {
 		)
 	);
 
+	register_post_type(
+		'form',
+		array(
+			'labels'                => array(
+				'name'                     => _x( 'Forms', 'post type general name' ),
+				'singular_name'            => _x( 'Form', 'post type singular name' ),
+				'add_new'                  => __( 'Add Form' ),
+				'add_new_item'             => __( 'Add New Form' ),
+				'new_item'                 => __( 'New Form' ),
+				'edit_item'                => __( 'Edit Form' ),
+				'view_item'                => __( 'View Form' ),
+				'all_items'                => __( 'All Forms' ),
+				'search_items'             => __( 'Search Forms' ),
+				'not_found'                => __( 'No forms found.' ),
+				'not_found_in_trash'       => __( 'No forms found in Trash.' ),
+				'filter_items_list'        => __( 'Filter forms list' ),
+				'items_list_navigation'    => __( 'Forms list navigation' ),
+				'items_list'               => __( 'Forms list' ),
+				'item_published'           => __( 'Form published.' ),
+				'item_published_privately' => __( 'Form published privately.' ),
+				'item_reverted_to_draft'   => __( 'Form reverted to draft.' ),
+				'item_scheduled'           => __( 'Form scheduled.' ),
+				'item_updated'             => __( 'Form updated.' ),
+			),
+			'description'           => __( 'Forms for collecting user submissions.' ),
+			'public'                => false,
+			'_builtin'              => true, /* internal use only. don't use this when registering your own post type. */
+			'show_ui'               => true,
+			'show_in_menu'          => false,
+			'rewrite'               => false,
+			'show_in_rest'          => true,
+			'rest_base'             => 'forms',
+			'rest_controller_class' => 'WP_REST_Forms_Controller',
+			'capability_type'       => 'post',
+			'map_meta_cap'          => true,
+			'supports'              => array(
+				'title',
+				'author',
+				'revisions',
+				'custom-fields',
+			),
+		)
+	);
+
 	register_post_status(
 		'publish',
 		array(

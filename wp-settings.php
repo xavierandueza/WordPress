@@ -347,6 +347,11 @@ require ABSPATH . WPINC . '/rest-api/endpoints/class-wp-rest-font-collections-co
 require ABSPATH . WPINC . '/rest-api/endpoints/class-wp-rest-abilities-v1-categories-controller.php';
 require ABSPATH . WPINC . '/rest-api/endpoints/class-wp-rest-abilities-v1-list-controller.php';
 require ABSPATH . WPINC . '/rest-api/endpoints/class-wp-rest-abilities-v1-run-controller.php';
+require ABSPATH . WPINC . '/rest-api/endpoints/class-wp-rest-forms-controller.php';
+require ABSPATH . WPINC . '/rest-api/endpoints/class-wp-rest-form-fields-controller.php';
+require ABSPATH . WPINC . '/rest-api/endpoints/class-wp-rest-form-submissions-controller.php';
+require ABSPATH . WPINC . '/rest-api/endpoints/class-wp-rest-form-notifications-controller.php';
+require ABSPATH . WPINC . '/rest-api/endpoints/class-wp-rest-form-analytics-controller.php';
 require ABSPATH . WPINC . '/rest-api/fields/class-wp-rest-meta-fields.php';
 require ABSPATH . WPINC . '/rest-api/fields/class-wp-rest-comment-meta-fields.php';
 require ABSPATH . WPINC . '/rest-api/fields/class-wp-rest-post-meta-fields.php';

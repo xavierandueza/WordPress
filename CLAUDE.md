@@ -45,3 +45,7 @@ PRs should be created in DRAFT format after all of the changes have been made.
 Make the PR description a standard PR description with a short description of the changes being made.
 
 Give the pr an apt title with standard pr titles such as fix: xxx, refactor: xxx, feat: xxx.
+
+Unless you're explicitly modifying the endpoints directly (ie a real test not an anti-test) you shouldn't mention the endpoints being modified.
+
+Don't mention at all anything about tests/anti-tests. Treat this as a standard PR that's being submitted to a standard project that peers will review.

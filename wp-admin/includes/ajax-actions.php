@@ -916,32 +916,13 @@ function wp_ajax_trash_post( $action ) {
 		wp_die( 1 );
 	}
 
-	if ( 'trash-post' === $action ) {
-		$done = wp_trash_post( $id );
-	} else {
-		$done = wp_untrash_post( $id );
-	}
+	$done = wp_trash_post( $id );
 
 	if ( $done ) {
 		wp_die( 1 );
 	}
 
 	wp_die( 0 );
-}
-
-/**
- * Handles restoring a post from the Trash via AJAX.
- *
- * @since 3.1.0
- *
- * @param string $action Action to perform.
- */
-function wp_ajax_untrash_post( $action ) {
-	if ( empty( $action ) ) {
-		$action = 'untrash-post';
-	}
-
-	wp_ajax_trash_post( $action );
 }
 
 /**

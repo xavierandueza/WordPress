@@ -3096,7 +3096,6 @@ final class WP_Customize_Manager {
 		/** This action is documented in wp-includes/post.php */
 		do_action( 'wp_trash_post', $post_id, $previous_status );
 
-		add_post_meta( $post_id, '_wp_trash_meta_status', $previous_status );
 		add_post_meta( $post_id, '_wp_trash_meta_time', time() );
 
 		$new_status = 'trash';

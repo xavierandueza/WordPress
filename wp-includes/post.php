@@ -4044,7 +4044,6 @@ function wp_trash_post( $post_id = 0 ) {
 	 */
 	do_action( 'wp_trash_post', $post_id, $previous_status );
 
-	add_post_meta( $post_id, '_wp_trash_meta_status', $previous_status );
 	add_post_meta( $post_id, '_wp_trash_meta_time', time() );
 
 	$post_updated = wp_update_post(
@@ -4080,98 +4079,14 @@ function wp_trash_post( $post_id = 0 ) {
  * @since 2.9.0
  * @since 5.6.0 An untrashed post is now returned to 'draft' status by default, except for
  *              attachments which are returned to their original 'inherit' status.
+ * @deprecated Post restore functionality has been removed. Trashed posts can only be permanently deleted.
  *
  * @param int $post_id Optional. Post ID. Default is the ID of the global `$post`.
- * @return WP_Post|false|null Post data on success, false or null on failure.
+ * @return false Always returns false.
  */
 function wp_untrash_post( $post_id = 0 ) {
-	$post = get_post( $post_id );
-
-	if ( ! $post ) {
-		return $post;
-	}
-
-	$post_id = $post->ID;
-
-	if ( 'trash' !== $post->post_status ) {
-		return false;
-	}
-
-	$previous_status = get_post_meta( $post_id, '_wp_trash_meta_status', true );
-
-	/**
-	 * Filters whether a post untrashing should take place.
-	 *
-	 * @since 4.9.0
-	 * @since 5.6.0 Added the `$previous_status` parameter.
-	 *
-	 * @param bool|null $untrash         Whether to go forward with untrashing.
-	 * @param WP_Post   $post            Post object.
-	 * @param string    $previous_status The status of the post at the point where it was trashed.
-	 */
-	$check = apply_filters( 'pre_untrash_post', null, $post, $previous_status );
-	if ( null !== $check ) {
-		return $check;
-	}
-
-	/**
-	 * Fires before a post is restored from the Trash.
-	 *
-	 * @since 2.9.0
-	 * @since 5.6.0 Added the `$previous_status` parameter.
-	 *
-	 * @param int    $post_id         Post ID.
-	 * @param string $previous_status The status of the post at the point where it was trashed.
-	 */
-	do_action( 'untrash_post', $post_id, $previous_status );
-
-	$new_status = ( 'attachment' === $post->post_type ) ? 'inherit' : 'draft';
-
-	/**
-	 * Filters the status that a post gets assigned when it is restored from the trash (untrashed).
-	 *
-	 * By default posts that are restored will be assigned a status of 'draft'. Return the value of `$previous_status`
-	 * in order to assign the status that the post had before it was trashed. The `wp_untrash_post_set_previous_status()`
-	 * function is available for this.
-	 *
-	 * Prior to WordPress 5.6.0, restored posts were always assigned their original status.
-	 *
-	 * @since 5.6.0
-	 *
-	 * @param string $new_status      The new status of the post being restored.
-	 * @param int    $post_id         The ID of the post being restored.
-	 * @param string $previous_status The status of the post at the point where it was trashed.
-	 */
-	$post_status = apply_filters( 'wp_untrash_post_status', $new_status, $post_id, $previous_status );
-
-	delete_post_meta( $post_id, '_wp_trash_meta_status' );
-	delete_post_meta( $post_id, '_wp_trash_meta_time' );
-
-	$post_updated = wp_update_post(
-		array(
-			'ID'          => $post_id,
-			'post_status' => $post_status,
-		)
-	);
-
-	if ( ! $post_updated ) {
-		return false;
-	}
-
-	wp_untrash_post_comments( $post_id );
-
-	/**
-	 * Fires after a post is restored from the Trash.
-	 *
-	 * @since 2.9.0
-	 * @since 5.6.0 Added the `$previous_status` parameter.
-	 *
-	 * @param int    $post_id         Post ID.
-	 * @param string $previous_status The status of the post at the point where it was trashed.
-	 */
-	do_action( 'untrashed_post', $post_id, $previous_status );
-
-	return $post;
+	_deprecated_function( __FUNCTION__, '6.8' );
+	return false;
 }
 
 /**
@@ -4239,65 +4154,13 @@ function wp_trash_post_comments( $post = null ) {
  * Restores comments for a post from the Trash.
  *
  * @since 2.9.0
- *
- * @global wpdb $wpdb WordPress database abstraction object.
+ * @deprecated Post restore functionality has been removed. Trashed post comments can no longer be restored.
  *
  * @param int|WP_Post|null $post Optional. Post ID or post object. Defaults to global $post.
- * @return true|void
+ * @return void
  */
 function wp_untrash_post_comments( $post = null ) {
-	global $wpdb;
-
-	$post = get_post( $post );
-
-	if ( ! $post ) {
-		return;
-	}
-
-	$post_id = $post->ID;
-
-	$statuses = get_post_meta( $post_id, '_wp_trash_meta_comments_status', true );
-
-	if ( ! $statuses ) {
-		return true;
-	}
-
-	/**
-	 * Fires before comments are restored for a post from the Trash.
-	 *
-	 * @since 2.9.0
-	 *
-	 * @param int $post_id Post ID.
-	 */
-	do_action( 'untrash_post_comments', $post_id );
-
-	// Restore each comment to its original status.
-	$group_by_status = array();
-	foreach ( $statuses as $comment_id => $comment_status ) {
-		$group_by_status[ $comment_status ][] = $comment_id;
-	}
-
-	foreach ( $group_by_status as $status => $comments ) {
-		// Confidence check. This shouldn't happen.
-		if ( 'post-trashed' === $status ) {
-			$status = '0';
-		}
-		$comments_in = implode( ', ', array_map( 'intval', $comments ) );
-		$wpdb->query( $wpdb->prepare( "UPDATE $wpdb->comments SET comment_approved = %s WHERE comment_ID IN ($comments_in)", $status ) );
-	}
-
-	clean_comment_cache( array_keys( $statuses ) );
-
-	delete_post_meta( $post_id, '_wp_trash_meta_comments_status' );
-
-	/**
-	 * Fires after comments are restored for a post from the Trash.
-	 *
-	 * @since 2.9.0
-	 *
-	 * @param int $post_id Post ID.
-	 */
-	do_action( 'untrashed_post_comments', $post_id );
+	_deprecated_function( __FUNCTION__, '6.8' );
 }
 
 /**
@@ -8519,22 +8382,6 @@ function wp_get_original_image_url( $attachment_id ) {
 	 * @param int    $attachment_id      Attachment ID.
 	 */
 	return apply_filters( 'wp_get_original_image_url', $original_image_url, $attachment_id );
-}
-
-/**
- * Filters callback which sets the status of an untrashed post to its previous status.
- *
- * This can be used as a callback on the `wp_untrash_post_status` filter.
- *
- * @since 5.6.0
- *
- * @param string $new_status      The new status of the post being restored.
- * @param int    $post_id         The ID of the post being restored.
- * @param string $previous_status The status of the post at the point where it was trashed.
- * @return string The new status of the post.
- */
-function wp_untrash_post_set_previous_status( $new_status, $post_id, $previous_status ) {
-	return $previous_status;
 }
 
 /**

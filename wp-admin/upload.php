@@ -85,42 +85,14 @@ if ( ! empty( $_GET['trashed'] ) && absint( $_GET['trashed'] ) ) {
 		);
 	}
 
-	$message .= sprintf(
-		' <a href="%1$s">%2$s</a>',
-		esc_url( wp_nonce_url( 'upload.php?doaction=undo&action=untrash&ids=' . ( $_GET['ids'] ?? '' ), 'bulk-media' ) ),
-		__( 'Undo' )
-	);
-
 	$_SERVER['REQUEST_URI'] = remove_query_arg( array( 'trashed' ), $_SERVER['REQUEST_URI'] );
 	unset( $_GET['trashed'] );
-}
-
-if ( ! empty( $_GET['untrashed'] ) && absint( $_GET['untrashed'] ) ) {
-	$untrashed = absint( $_GET['untrashed'] );
-
-	if ( 1 === $untrashed ) {
-		$message = __( 'Media file restored from the Trash.' );
-	} else {
-		$message = sprintf(
-			/* translators: %s: Number of media files. */
-			_n( '%s media file restored from the Trash.', '%s media files restored from the Trash.', $untrashed ),
-			number_format_i18n( $untrashed )
-		);
-	}
-
-	$_SERVER['REQUEST_URI'] = remove_query_arg( array( 'untrashed' ), $_SERVER['REQUEST_URI'] );
-	unset( $_GET['untrashed'] );
 }
 
 $messages[1] = __( 'Media file updated.' );
 $messages[2] = __( 'Media file permanently deleted.' );
 $messages[3] = __( 'Error saving media file.' );
-$messages[4] = __( 'Media file moved to the Trash.' ) . sprintf(
-	' <a href="%1$s">%2$s</a>',
-	esc_url( wp_nonce_url( 'upload.php?doaction=undo&action=untrash&ids=' . ( $_GET['ids'] ?? '' ), 'bulk-media' ) ),
-	__( 'Undo' )
-);
-$messages[5] = __( 'Media file restored from the Trash.' );
+$messages[4] = __( 'Media file moved to the Trash.' );
 
 if ( ! empty( $_GET['message'] ) && isset( $messages[ $_GET['message'] ] ) ) {
 	$message = $messages[ $_GET['message'] ];
@@ -308,21 +280,6 @@ if ( $doaction ) {
 				),
 				$location
 			);
-			break;
-		case 'untrash':
-			if ( empty( $post_ids ) ) {
-				break;
-			}
-			foreach ( $post_ids as $post_id ) {
-				if ( ! current_user_can( 'delete_post', $post_id ) ) {
-					wp_die( __( 'Sorry, you are not allowed to restore this item from the Trash.' ) );
-				}
-
-				if ( ! wp_untrash_post( $post_id ) ) {
-					wp_die( __( 'Error in restoring the item from Trash.' ) );
-				}
-			}
-			$location = add_query_arg( 'untrashed', count( $post_ids ), $location );
 			break;
 		case 'delete':
 			if ( empty( $post_ids ) ) {

@@ -65,7 +65,6 @@ $core_actions_post = array(
 	'delete-meta',
 	'delete-post',
 	'trash-post',
-	'untrash-post',
 	'delete-page',
 	'dim-comment',
 	'add-link-category',

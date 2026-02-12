@@ -780,15 +780,7 @@ class WP_Media_List_Table extends WP_List_Table {
 		}
 
 		if ( current_user_can( 'delete_post', $post->ID ) ) {
-			if ( $this->is_trash ) {
-				$actions['untrash'] = sprintf(
-					'<a href="%s" class="submitdelete aria-button-if-js" aria-label="%s">%s</a>',
-					esc_url( wp_nonce_url( "post.php?action=untrash&amp;post=$post->ID", 'untrash-post_' . $post->ID ) ),
-					/* translators: %s: Attachment title. */
-					esc_attr( sprintf( __( 'Restore &#8220;%s&#8221; from the Trash' ), $att_title ) ),
-					__( 'Restore' )
-				);
-			} elseif ( EMPTY_TRASH_DAYS && MEDIA_TRASH ) {
+			if ( EMPTY_TRASH_DAYS && MEDIA_TRASH && ! $this->is_trash ) {
 				$actions['trash'] = sprintf(
 					'<a href="%s" class="submitdelete aria-button-if-js" aria-label="%s">%s</a>',
 					esc_url( wp_nonce_url( "post.php?action=trash&amp;post=$post->ID", 'trash-post_' . $post->ID ) ),

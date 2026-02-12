@@ -65,7 +65,7 @@ class WP_REST_Settings_Controller extends WP_REST_Controller {
 	 * @return bool True if the request has read access for the item, otherwise false.
 	 */
 	public function get_item_permissions_check( $request ) {
-		return current_user_can( 'manage_options' );
+		return WP_REST_User_Utilities::has_capability( 'manage_options' );
 	}
 
 	/**

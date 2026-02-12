@@ -442,26 +442,7 @@ class WP_REST_Users_Controller extends WP_REST_Controller {
 	 * @return WP_User|WP_Error True if ID is valid, WP_Error otherwise.
 	 */
 	protected function get_user( $id ) {
-		$error = new WP_Error(
-			'rest_user_invalid_id',
-			__( 'Invalid user ID.' ),
-			array( 'status' => 404 )
-		);
-
-		if ( (int) $id <= 0 ) {
-			return $error;
-		}
-
-		$user = get_userdata( (int) $id );
-		if ( empty( $user ) || ! $user->exists() ) {
-			return $error;
-		}
-
-		if ( is_multisite() && ! is_user_member_of_blog( $user->ID ) ) {
-			return $error;
-		}
-
-		return $user;
+		return WP_REST_User_Utilities::validate_user_id( $id, false );
 	}
 
 	/**
@@ -532,17 +513,12 @@ class WP_REST_Users_Controller extends WP_REST_Controller {
 	 * @return WP_REST_Response|WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function get_current_item( $request ) {
-		$current_user_id = get_current_user_id();
+		$user = WP_REST_User_Utilities::resolve_current_user();
 
-		if ( empty( $current_user_id ) ) {
-			return new WP_Error(
-				'rest_not_logged_in',
-				__( 'You are not currently logged in.' ),
-				array( 'status' => 401 )
-			);
+		if ( is_wp_error( $user ) ) {
+			return $user;
 		}
 
-		$user     = wp_get_current_user();
 		$response = $this->prepare_item_for_response( $user, $request );
 		$response = rest_ensure_response( $response );
 
@@ -558,16 +534,11 @@ class WP_REST_Users_Controller extends WP_REST_Controller {
 	 * @return true|WP_Error True if the request has access to create items, WP_Error object otherwise.
 	 */
 	public function create_item_permissions_check( $request ) {
-
-		if ( ! current_user_can( 'create_users' ) ) {
-			return new WP_Error(
-				'rest_cannot_create_user',
-				__( 'Sorry, you are not allowed to create new users.' ),
-				array( 'status' => rest_authorization_required_code() )
-			);
-		}
-
-		return true;
+		return WP_REST_User_Utilities::check_permission(
+			'create_users',
+			'rest_cannot_create_user',
+			__( 'Sorry, you are not allowed to create new users.' )
+		);
 	}
 
 	/**
@@ -896,15 +867,12 @@ class WP_REST_Users_Controller extends WP_REST_Controller {
 			return $user;
 		}
 
-		if ( ! current_user_can( 'delete_user', $user->ID ) ) {
-			return new WP_Error(
-				'rest_user_cannot_delete',
-				__( 'Sorry, you are not allowed to delete this user.' ),
-				array( 'status' => rest_authorization_required_code() )
-			);
-		}
-
-		return true;
+		return WP_REST_User_Utilities::check_permission(
+			'delete_user',
+			'rest_user_cannot_delete',
+			__( 'Sorry, you are not allowed to delete this user.' ),
+			$user->ID
+		);
 	}
 
 	/**

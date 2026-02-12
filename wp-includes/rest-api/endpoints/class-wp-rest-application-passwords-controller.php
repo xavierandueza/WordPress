@@ -116,15 +116,12 @@ class WP_REST_Application_Passwords_Controller extends WP_REST_Controller {
 			return $user;
 		}
 
-		if ( ! current_user_can( 'list_app_passwords', $user->ID ) ) {
-			return new WP_Error(
-				'rest_cannot_list_application_passwords',
-				__( 'Sorry, you are not allowed to list application passwords for this user.' ),
-				array( 'status' => rest_authorization_required_code() )
-			);
-		}
-
-		return true;
+		return WP_REST_User_Utilities::check_permission(
+			'list_app_passwords',
+			'rest_cannot_list_application_passwords',
+			__( 'Sorry, you are not allowed to list application passwords for this user.' ),
+			$user->ID
+		);
 	}
 
 	/**
@@ -169,15 +166,13 @@ class WP_REST_Application_Passwords_Controller extends WP_REST_Controller {
 			return $user;
 		}
 
-		if ( ! current_user_can( 'read_app_password', $user->ID, $request['uuid'] ) ) {
-			return new WP_Error(
-				'rest_cannot_read_application_password',
-				__( 'Sorry, you are not allowed to read this application password.' ),
-				array( 'status' => rest_authorization_required_code() )
-			);
-		}
-
-		return true;
+		return WP_REST_User_Utilities::check_permission(
+			'read_app_password',
+			'rest_cannot_read_application_password',
+			__( 'Sorry, you are not allowed to read this application password.' ),
+			$user->ID,
+			$request['uuid']
+		);
 	}
 
 	/**
@@ -213,15 +208,12 @@ class WP_REST_Application_Passwords_Controller extends WP_REST_Controller {
 			return $user;
 		}
 
-		if ( ! current_user_can( 'create_app_password', $user->ID ) ) {
-			return new WP_Error(
-				'rest_cannot_create_application_passwords',
-				__( 'Sorry, you are not allowed to create application passwords for this user.' ),
-				array( 'status' => rest_authorization_required_code() )
-			);
-		}
-
-		return true;
+		return WP_REST_User_Utilities::check_permission(
+			'create_app_password',
+			'rest_cannot_create_application_passwords',
+			__( 'Sorry, you are not allowed to create application passwords for this user.' ),
+			$user->ID
+		);
 	}
 
 	/**
@@ -296,15 +288,13 @@ class WP_REST_Application_Passwords_Controller extends WP_REST_Controller {
 			return $user;
 		}
 
-		if ( ! current_user_can( 'edit_app_password', $user->ID, $request['uuid'] ) ) {
-			return new WP_Error(
-				'rest_cannot_edit_application_password',
-				__( 'Sorry, you are not allowed to edit this application password.' ),
-				array( 'status' => rest_authorization_required_code() )
-			);
-		}
-
-		return true;
+		return WP_REST_User_Utilities::check_permission(
+			'edit_app_password',
+			'rest_cannot_edit_application_password',
+			__( 'Sorry, you are not allowed to edit this application password.' ),
+			$user->ID,
+			$request['uuid']
+		);
 	}
 
 	/**
@@ -370,15 +360,12 @@ class WP_REST_Application_Passwords_Controller extends WP_REST_Controller {
 			return $user;
 		}
 
-		if ( ! current_user_can( 'delete_app_passwords', $user->ID ) ) {
-			return new WP_Error(
-				'rest_cannot_delete_application_passwords',
-				__( 'Sorry, you are not allowed to delete application passwords for this user.' ),
-				array( 'status' => rest_authorization_required_code() )
-			);
-		}
-
-		return true;
+		return WP_REST_User_Utilities::check_permission(
+			'delete_app_passwords',
+			'rest_cannot_delete_application_passwords',
+			__( 'Sorry, you are not allowed to delete application passwords for this user.' ),
+			$user->ID
+		);
 	}
 
 	/**
@@ -425,15 +412,13 @@ class WP_REST_Application_Passwords_Controller extends WP_REST_Controller {
 			return $user;
 		}
 
-		if ( ! current_user_can( 'delete_app_password', $user->ID, $request['uuid'] ) ) {
-			return new WP_Error(
-				'rest_cannot_delete_application_password',
-				__( 'Sorry, you are not allowed to delete this application password.' ),
-				array( 'status' => rest_authorization_required_code() )
-			);
-		}
-
-		return true;
+		return WP_REST_User_Utilities::check_permission(
+			'delete_app_password',
+			'rest_cannot_delete_application_password',
+			__( 'Sorry, you are not allowed to delete this application password.' ),
+			$user->ID,
+			$request['uuid']
+		);
 	}
 
 	/**
@@ -687,40 +672,29 @@ class WP_REST_Application_Passwords_Controller extends WP_REST_Controller {
 			);
 		}
 
-		$error = new WP_Error(
-			'rest_user_invalid_id',
-			__( 'Invalid user ID.' ),
-			array( 'status' => 404 )
-		);
-
 		$id = $request['user_id'];
 
 		if ( 'me' === $id ) {
-			if ( ! is_user_logged_in() ) {
+			$user = WP_REST_User_Utilities::resolve_current_user();
+
+			if ( is_wp_error( $user ) ) {
+				return $user;
+			}
+
+			// Verify multisite blog membership for the current user.
+			if ( ! WP_REST_User_Utilities::check_multisite_membership( $user, true ) ) {
 				return new WP_Error(
-					'rest_not_logged_in',
-					__( 'You are not currently logged in.' ),
-					array( 'status' => 401 )
+					'rest_user_invalid_id',
+					__( 'Invalid user ID.' ),
+					array( 'status' => 404 )
 				);
 			}
-
-			$user = wp_get_current_user();
 		} else {
-			$id = (int) $id;
-
-			if ( $id <= 0 ) {
-				return $error;
-			}
-
-			$user = get_userdata( $id );
+			$user = WP_REST_User_Utilities::validate_user_id( $id, true );
 		}
 
-		if ( empty( $user ) || ! $user->exists() ) {
-			return $error;
-		}
-
-		if ( is_multisite() && ! user_can( $user->ID, 'manage_sites' ) && ! is_user_member_of_blog( $user->ID ) ) {
-			return $error;
+		if ( is_wp_error( $user ) ) {
+			return $user;
 		}
 
 		if ( ! wp_is_application_passwords_available_for_user( $user ) ) {

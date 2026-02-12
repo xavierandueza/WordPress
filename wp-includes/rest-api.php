@@ -324,6 +324,18 @@ function create_initial_rest_routes() {
 	$controller = new WP_REST_Comments_Controller();
 	$controller->register_routes();
 
+	// Comment Pins.
+	$controller = new WP_REST_Comment_Pins_Controller();
+	$controller->register_routes();
+
+	// Comment Reports.
+	$controller = new WP_REST_Comment_Reports_Controller();
+	$controller->register_routes();
+
+	// Comment Bulk Actions.
+	$controller = new WP_REST_Comment_Bulk_Controller();
+	$controller->register_routes();
+
 	$search_handlers = array(
 		new WP_REST_Post_Search_Handler(),
 		new WP_REST_Term_Search_Handler(),

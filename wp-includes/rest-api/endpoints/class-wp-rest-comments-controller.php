@@ -1204,6 +1204,14 @@ class WP_REST_Comments_Controller extends WP_REST_Controller {
 			$data['meta'] = $this->meta->get_value( $comment->comment_ID, $request );
 		}
 
+		if ( in_array( 'pinned', $fields, true ) ) {
+			$data['pinned'] = wp_is_comment_pinned( $comment->comment_ID );
+		}
+
+		if ( in_array( 'report_count', $fields, true ) ) {
+			$data['report_count'] = (int) get_comment_meta( $comment->comment_ID, '_report_count', true );
+		}
+
 		$context = ! empty( $request['context'] ) ? $request['context'] : 'view';
 		$data    = $this->add_additional_fields_to_object( $data, $request );
 		$data    = $this->filter_response_by_context( $data, $context );
@@ -1338,6 +1346,9 @@ class WP_REST_Comments_Controller extends WP_REST_Controller {
 				break;
 			case 'include':
 				$normalized = 'comment__in';
+				break;
+			case 'pinned':
+				$normalized = 'comment_pinned';
 				break;
 			default:
 				$normalized = $prefix . $query_param;
@@ -1611,6 +1622,18 @@ class WP_REST_Comments_Controller extends WP_REST_Controller {
 					'readonly'    => true,
 					'default'     => 'comment',
 				),
+				'pinned'            => array(
+					'description' => __( 'Whether the comment is pinned.' ),
+					'type'        => 'boolean',
+					'context'     => array( 'view', 'edit', 'embed' ),
+					'readonly'    => true,
+				),
+				'report_count'      => array(
+					'description' => __( 'Number of reports filed against the comment.' ),
+					'type'        => 'integer',
+					'context'     => array( 'edit' ),
+					'readonly'    => true,
+				),
 			),
 		);
 
@@ -1737,6 +1760,7 @@ class WP_REST_Comments_Controller extends WP_REST_Controller {
 				'post',
 				'parent',
 				'type',
+				'pinned',
 			),
 		);
 

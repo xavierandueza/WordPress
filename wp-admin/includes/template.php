@@ -2257,12 +2257,12 @@ function _post_states( $post, $display = true ) {
 
 		$post_states_html .= ' &mdash; ';
 
-		foreach ( $post_states as $state ) {
+		foreach ( $post_states as $state_slug => $state ) {
 			++$i;
 
 			$suffix = ( $i < $state_count ) ? $separator : '';
 
-			$post_states_html .= "<span class='post-state'>{$state}{$suffix}</span>";
+			$post_states_html .= "<span class='post-state post-state--" . sanitize_html_class( $state_slug ) . "'>{$state}{$suffix}</span>";
 		}
 	}
 

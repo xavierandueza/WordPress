@@ -186,7 +186,8 @@ body.post-type-wp_navigation .inline-edit-status {
 	position: relative;
 	min-width: 255px;
 	border: 1px solid #c3c4c7;
-	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+	border-radius: 4px;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 	background: #fff;
 }
 
@@ -660,7 +661,7 @@ form#tags-filter {
 #poststuff .stuffbox > h3, /* Back-compat for pre-4.4 */
 #poststuff h2 {
 	font-size: 14px;
-	padding: 8px 12px;
+	padding: 10px 16px;
 	margin: 0;
 	line-height: 1.4;
 }
@@ -674,7 +675,7 @@ form#tags-filter {
 }
 
 #poststuff .inside {
-	margin: 6px 0 0;
+	margin: 8px 0 0;
 }
 
 .link-php #poststuff .inside,

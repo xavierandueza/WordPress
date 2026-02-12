@@ -320,6 +320,10 @@ function create_initial_rest_routes() {
 	$controller = new WP_REST_Application_Passwords_Controller();
 	$controller->register_routes();
 
+	// Profile Links.
+	$controller = new WP_REST_Profile_Links_Controller();
+	$controller->register_routes();
+
 	// Comments.
 	$controller = new WP_REST_Comments_Controller();
 	$controller->register_routes();

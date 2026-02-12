@@ -50,6 +50,24 @@
 <h2>Migrating from other systems</h2>
 <p>WordPress can <a href="https://developer.wordpress.org/advanced-administration/wordpress/import/">import from a number of systems</a>. First you need to get WordPress installed and working as described above, before using <a href="wp-admin/import.php">our import tools</a>.</p>
 
+<h2>How WordPress Works</h2>
+<p>WordPress is an open-source content management system (CMS) built with PHP and MySQL. At its core, WordPress stores your content in a database and uses PHP to dynamically generate web pages when visitors request them. This architecture separates your content from its presentation, making it easy to change the look and feel of your site without modifying your content.</p>
+
+<h3>Themes</h3>
+<p>Themes control the visual appearance and layout of your site. A theme is a collection of template files, stylesheets, and assets that determine how your content is displayed. WordPress uses a <strong>template hierarchy</strong> to decide which template file to use for each page. For example, when a visitor views a single blog post, WordPress looks for <code>single.php</code>; for a category archive, it looks for <code>category.php</code>. You can switch themes at any time without losing your content. Browse thousands of free themes in the <a href="https://wordpress.org/themes/">WordPress Theme Directory</a>, or create your own using the <a href="https://developer.wordpress.org/themes/">Theme Developer Handbook</a>.</p>
+
+<h3>Plugins</h3>
+<p>Plugins extend and customize WordPress functionality without modifying core files. From contact forms and SEO tools to e-commerce solutions and security enhancements, plugins can add virtually any feature to your site. WordPress ships with a powerful <strong>hooks system</strong> consisting of <em>actions</em> and <em>filters</em>. Actions let plugins execute code at specific points during WordPress execution, while filters let plugins modify data before it is displayed or saved. Explore the <a href="https://wordpress.org/plugins/">WordPress Plugin Directory</a> for over 50,000 free plugins, or build your own with the <a href="https://developer.wordpress.org/plugins/">Plugin Developer Handbook</a>.</p>
+
+<h3>The Block Editor</h3>
+<p>WordPress features a block-based editor (also known as Gutenberg) that provides a modern, visual editing experience. Content is composed of individual blocks&#8212;paragraphs, images, headings, galleries, embeds, and more&#8212;that you can arrange, customize, and combine freely. The block editor also supports <strong>Full Site Editing</strong>, allowing you to design your entire site&#8212;headers, footers, templates, and all&#8212;using blocks.</p>
+
+<h3>Users and Roles</h3>
+<p>WordPress includes a built-in user management system with five default roles: <strong>Administrator</strong>, <strong>Editor</strong>, <strong>Author</strong>, <strong>Contributor</strong>, and <strong>Subscriber</strong>. Each role has a defined set of capabilities that control what actions a user can perform. This makes it straightforward to run a multi-author site with appropriate permissions for each team member.</p>
+
+<h3>The WordPress REST API</h3>
+<p>The WordPress REST API provides a standardized interface for external applications to interact with your site. It allows you to create, read, update, and delete content using simple HTTP requests and JSON data. This makes WordPress a powerful back-end for mobile apps, single-page applications, and integrations with third-party services.</p>
+
 <h2>System Requirements</h2>
 <ul>
 	<li><a href="https://www.php.net/">PHP</a> version <strong>7.4</strong> or greater.</li>

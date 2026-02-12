@@ -796,6 +796,14 @@ class WP_REST_Comments_Controller extends WP_REST_Controller {
 			$this->handle_status_param( $request['status'], $comment_id );
 		}
 
+		if ( isset( $request['priority'] ) ) {
+			update_comment_meta( $comment_id, 'comment_priority', sanitize_key( $request['priority'] ) );
+		}
+
+		if ( isset( $request['editorial_note'] ) ) {
+			update_comment_meta( $comment_id, 'editorial_note', sanitize_textarea_field( $request['editorial_note'] ) );
+		}
+
 		$comment = get_comment( $comment_id );
 
 		/**
@@ -966,6 +974,14 @@ class WP_REST_Comments_Controller extends WP_REST_Controller {
 			if ( isset( $request['status'] ) ) {
 				$this->handle_status_param( $request['status'], $id );
 			}
+		}
+
+		if ( isset( $request['priority'] ) ) {
+			update_comment_meta( $id, 'comment_priority', sanitize_key( $request['priority'] ) );
+		}
+
+		if ( isset( $request['editorial_note'] ) ) {
+			update_comment_meta( $id, 'editorial_note', sanitize_textarea_field( $request['editorial_note'] ) );
 		}
 
 		$comment = get_comment( $id );
@@ -1202,6 +1218,21 @@ class WP_REST_Comments_Controller extends WP_REST_Controller {
 
 		if ( in_array( 'meta', $fields, true ) ) {
 			$data['meta'] = $this->meta->get_value( $comment->comment_ID, $request );
+		}
+
+		if ( in_array( 'priority', $fields, true ) ) {
+			$priority         = get_comment_meta( $comment->comment_ID, 'comment_priority', true );
+			$data['priority'] = $priority ? $priority : 'normal';
+		}
+
+		if ( in_array( 'editorial_note', $fields, true ) ) {
+			$editorial_note         = get_comment_meta( $comment->comment_ID, 'editorial_note', true );
+			$data['editorial_note'] = $editorial_note ? $editorial_note : '';
+		}
+
+		if ( in_array( 'word_count', $fields, true ) ) {
+			$content          = $comment->comment_content;
+			$data['word_count'] = $content ? str_word_count( wp_strip_all_tags( $content ) ) : 0;
 		}
 
 		$context = ! empty( $request['context'] ) ? $request['context'] : 'view';
@@ -1610,6 +1641,30 @@ class WP_REST_Comments_Controller extends WP_REST_Controller {
 					'context'     => array( 'view', 'edit', 'embed' ),
 					'readonly'    => true,
 					'default'     => 'comment',
+				),
+				'priority'          => array(
+					'description' => __( 'Priority level for comment moderation.' ),
+					'type'        => 'string',
+					'enum'        => array( 'low', 'normal', 'high', 'urgent' ),
+					'default'     => 'normal',
+					'context'     => array( 'view', 'edit' ),
+					'arg_options' => array(
+						'sanitize_callback' => 'sanitize_key',
+					),
+				),
+				'editorial_note'    => array(
+					'description' => __( 'Internal editorial note for moderators.' ),
+					'type'        => 'string',
+					'context'     => array( 'edit' ),
+					'arg_options' => array(
+						'sanitize_callback' => 'sanitize_textarea_field',
+					),
+				),
+				'word_count'        => array(
+					'description' => __( 'Word count of the comment content.' ),
+					'type'        => 'integer',
+					'context'     => array( 'view', 'edit', 'embed' ),
+					'readonly'    => true,
 				),
 			),
 		);

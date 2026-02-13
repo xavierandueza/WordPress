@@ -155,6 +155,13 @@ class WP_REST_Site_Health_Controller extends WP_REST_Controller {
 				'permission_callback' => function () {
 					return $this->validate_request_permission( 'directory_sizes' ) && ! is_multisite();
 				},
+				'args'                => array(
+					'include_breakdown' => array(
+						'description' => __( 'Include sub-directory breakdown for the uploads directory.' ),
+						'type'        => 'boolean',
+						'default'     => false,
+					),
+				),
 			)
 		);
 
@@ -278,9 +285,19 @@ class WP_REST_Site_Health_Controller extends WP_REST_Controller {
 	 *
 	 * @since 5.6.0
 	 *
+	 * @param WP_REST_Request $request Full details about the request.
 	 * @return array|WP_Error
 	 */
-	public function get_directory_sizes() {
+	public function get_directory_sizes( $request = null ) {
+		// Check for cached directory sizes.
+		$transient_key = '_site_health_dir_sizes';
+		$cached_data   = get_transient( $transient_key );
+
+		if ( false !== $cached_data ) {
+			$cached_data['cache_status'] = 'hit';
+			return $cached_data;
+		}
+
 		if ( ! class_exists( 'WP_Debug_Data' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/class-wp-debug-data.php';
 		}
@@ -321,7 +338,82 @@ class WP_REST_Site_Health_Controller extends WP_REST_Controller {
 			return new WP_Error( 'not_available', __( 'Directory sizes could not be returned.' ), array( 'status' => 500 ) );
 		}
 
+		// Calculate percentage of total for each directory.
+		$total_raw = isset( $all_sizes['total_size']['raw'] ) ? (int) $all_sizes['total_size']['raw'] : 0;
+
+		foreach ( $all_sizes as $name => &$dir_data ) {
+			if ( is_array( $dir_data ) && isset( $dir_data['raw'] ) && $total_raw > 0 ) {
+				$dir_data['percentage_of_total'] = round( ( $dir_data['raw'] / $total_raw ) * 100, 2 );
+			}
+		}
+		unset( $dir_data );
+
+		// Include uploads sub-directory breakdown if requested.
+		if ( null !== $request && ! empty( $request['include_breakdown'] ) && isset( $all_sizes['uploads_size'] ) ) {
+			$upload_dir = wp_upload_dir();
+			$base_dir   = $upload_dir['basedir'];
+
+			if ( is_dir( $base_dir ) ) {
+				$subdirs = array();
+				$items   = scandir( $base_dir );
+
+				if ( is_array( $items ) ) {
+					foreach ( $items as $item ) {
+						if ( '.' === $item || '..' === $item ) {
+							continue;
+						}
+
+						$item_path = $base_dir . '/' . $item;
+						if ( is_dir( $item_path ) ) {
+							$size             = $this->get_directory_size( $item_path );
+							$subdirs[ $item ] = array(
+								'size' => size_format( $size ),
+								'raw'  => $size,
+							);
+						}
+					}
+				}
+
+				$all_sizes['uploads_size']['breakdown'] = $subdirs;
+			}
+		}
+
+		$all_sizes['cache_status'] = 'miss';
+
+		// Cache the result for 1 hour.
+		set_transient( $transient_key, $all_sizes, HOUR_IN_SECONDS );
+
 		return $all_sizes;
+	}
+
+	/**
+	 * Calculates the total size of a directory recursively.
+	 *
+	 * @since 6.8.0
+	 *
+	 * @param string $directory Absolute path to the directory.
+	 * @return int Total size in bytes.
+	 */
+	private function get_directory_size( $directory ) {
+		$size = 0;
+
+		try {
+			$iterator = new RecursiveIteratorIterator(
+				new RecursiveDirectoryIterator( $directory, FilesystemIterator::SKIP_DOTS ),
+				RecursiveIteratorIterator::SELF_FIRST
+			);
+
+			foreach ( $iterator as $file ) {
+				if ( $file->isFile() ) {
+					$size += $file->getSize();
+				}
+			}
+		} catch ( Exception $e ) {
+			// If we can't read the directory, return 0.
+			return 0;
+		}
+
+		return $size;
 	}
 
 	/**

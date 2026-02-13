@@ -64,7 +64,12 @@ class WP_REST_Post_Statuses_Controller extends WP_REST_Controller {
 					'callback'            => array( $this, 'get_item' ),
 					'permission_callback' => array( $this, 'get_item_permissions_check' ),
 					'args'                => array(
-						'context' => $this->get_context_param( array( 'default' => 'view' ) ),
+						'context'       => $this->get_context_param( array( 'default' => 'view' ) ),
+						'include_usage' => array(
+							'description' => __( 'Include usage statistics for this status.' ),
+							'type'        => 'boolean',
+							'default'     => false,
+						),
 					),
 				),
 				'schema' => array( $this, 'get_public_item_schema' ),
@@ -258,6 +263,42 @@ class WP_REST_Post_Statuses_Controller extends WP_REST_Controller {
 			$data['date_floating'] = $status->date_floating;
 		}
 
+		if ( in_array( 'usage_count', $fields, true ) || in_array( 'percentage_of_total', $fields, true ) ) {
+			$include_usage = ! empty( $request['include_usage'] );
+
+			if ( $include_usage ) {
+				global $wpdb;
+
+				$post_types    = get_post_types( array( 'public' => true ), 'names' );
+				$post_types_in = "'" . implode( "','", array_map( 'esc_sql', $post_types ) ) . "'";
+
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Post types are sanitized via esc_sql.
+				$status_count = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_status = %s AND post_type IN ({$post_types_in})",
+						$status->name
+					)
+				);
+
+				if ( in_array( 'usage_count', $fields, true ) ) {
+					$data['usage_count'] = $status_count;
+				}
+
+				if ( in_array( 'percentage_of_total', $fields, true ) ) {
+					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Post types are sanitized via esc_sql.
+					$total_count = (int) $wpdb->get_var(
+						"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type IN ({$post_types_in})"
+					);
+
+					if ( $total_count > 0 ) {
+						$data['percentage_of_total'] = round( ( $status_count / $total_count ) * 100, 2 );
+					} else {
+						$data['percentage_of_total'] = 0.0;
+					}
+				}
+			}
+		}
+
 		$context = ! empty( $request['context'] ) ? $request['context'] : 'view';
 		$data    = $this->add_additional_fields_to_object( $data, $request );
 		$data    = $this->filter_response_by_context( $data, $context );
@@ -344,9 +385,21 @@ class WP_REST_Post_Statuses_Controller extends WP_REST_Controller {
 					'context'     => array( 'embed', 'view', 'edit' ),
 					'readonly'    => true,
 				),
-				'date_floating' => array(
+				'date_floating'      => array(
 					'description' => __( 'Whether posts of this status may have floating published dates.' ),
 					'type'        => 'boolean',
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
+				),
+				'usage_count'        => array(
+					'description' => __( 'Number of posts with this status across all public post types.' ),
+					'type'        => 'integer',
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
+				),
+				'percentage_of_total' => array(
+					'description' => __( 'Percentage of total posts that have this status.' ),
+					'type'        => 'number',
 					'context'     => array( 'view', 'edit' ),
 					'readonly'    => true,
 				),

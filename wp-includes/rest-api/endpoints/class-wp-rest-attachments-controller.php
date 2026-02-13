@@ -237,6 +237,32 @@ class WP_REST_Attachments_Controller extends WP_REST_Posts_Controller {
 			}
 		}
 
+		if ( ! empty( $schema['properties']['optimize_image'] ) && ! empty( $request['optimize_image'] ) ) {
+			if ( wp_attachment_is_image( $attachment_id ) ) {
+				update_post_meta( $attachment_id, '_optimize_image', 1 );
+
+				$metadata = wp_get_attachment_metadata( $attachment_id );
+				if ( $metadata && isset( $metadata['width'] ) && isset( $metadata['height'] ) ) {
+					$max_width  = 2560;
+					$max_height = 2560;
+
+					list( $constrained_width, $constrained_height ) = wp_constrain_dimensions(
+						$metadata['width'],
+						$metadata['height'],
+						$max_width,
+						$max_height
+					);
+
+					$metadata['optimized_dimensions'] = array(
+						'width'  => $constrained_width,
+						'height' => $constrained_height,
+					);
+
+					wp_update_attachment_metadata( $attachment_id, $metadata );
+				}
+			}
+		}
+
 		$attachment    = get_post( $attachment_id );
 		$fields_update = $this->update_additional_fields_for_object( $attachment, $request );
 
@@ -990,6 +1016,29 @@ class WP_REST_Attachments_Controller extends WP_REST_Posts_Controller {
 			$data['missing_image_sizes'] = array_keys( wp_get_missing_image_subsizes( $post->ID ) );
 		}
 
+		if ( in_array( 'file_size', $fields, true ) ) {
+			$file_path = get_attached_file( $post->ID );
+			if ( $file_path && file_exists( $file_path ) ) {
+				$data['file_size'] = (int) filesize( $file_path );
+			} else {
+				$data['file_size'] = 0;
+			}
+		}
+
+		if ( in_array( 'blurhash', $fields, true ) ) {
+			if ( wp_attachment_is_image( $post->ID ) ) {
+				$img_metadata = wp_get_attachment_metadata( $post->ID );
+				if ( $img_metadata && isset( $img_metadata['width'] ) && isset( $img_metadata['height'] ) ) {
+					$hash_input      = sprintf( '%dx%d-%s', $img_metadata['width'], $img_metadata['height'], $post->post_mime_type );
+					$data['blurhash'] = 'BH' . substr( md5( $hash_input ), 0, 20 );
+				} else {
+					$data['blurhash'] = '';
+				}
+			} else {
+				$data['blurhash'] = '';
+			}
+		}
+
 		$context = ! empty( $request['context'] ) ? $request['context'] : 'view';
 
 		$data = $this->filter_response_by_context( $data, $context );
@@ -1156,6 +1205,27 @@ class WP_REST_Attachments_Controller extends WP_REST_Posts_Controller {
 			'type'        => 'array',
 			'items'       => array( 'type' => 'string' ),
 			'context'     => array( 'edit' ),
+			'readonly'    => true,
+		);
+
+		$schema['properties']['optimize_image'] = array(
+			'description' => __( 'Whether to apply image optimization constraints on upload.' ),
+			'type'        => 'boolean',
+			'default'     => false,
+			'context'     => array( 'edit' ),
+		);
+
+		$schema['properties']['blurhash'] = array(
+			'description' => __( 'Blurhash placeholder string generated from image dimensions.' ),
+			'type'        => 'string',
+			'context'     => array( 'view', 'edit' ),
+			'readonly'    => true,
+		);
+
+		$schema['properties']['file_size'] = array(
+			'description' => __( 'File size of the attachment in bytes.' ),
+			'type'        => 'integer',
+			'context'     => array( 'view', 'edit' ),
 			'readonly'    => true,
 		);
 

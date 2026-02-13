@@ -102,7 +102,12 @@ class WP_REST_Block_Types_Controller extends WP_REST_Controller {
 					'callback'            => array( $this, 'get_item' ),
 					'permission_callback' => array( $this, 'get_item_permissions_check' ),
 					'args'                => array(
-						'context' => $this->get_context_param( array( 'default' => 'view' ) ),
+						'context'             => $this->get_context_param( array( 'default' => 'view' ) ),
+						'include_usage_stats' => array(
+							'description' => __( 'Include usage statistics for this block type.' ),
+							'type'        => 'boolean',
+							'default'     => false,
+						),
 					),
 				),
 				'schema' => array( $this, 'get_public_item_schema' ),
@@ -334,6 +339,42 @@ class WP_REST_Block_Types_Controller extends WP_REST_Controller {
 			$styles         = array_values( $styles );
 			$data['styles'] = wp_parse_args( $styles, $data['styles'] );
 			$data['styles'] = array_filter( $data['styles'] );
+		}
+
+		if ( rest_is_field_included( 'usage_count', $fields ) || rest_is_field_included( 'most_used_in_post_type', $fields ) ) {
+			$include_stats = ! empty( $request['include_usage_stats'] );
+
+			if ( $include_stats ) {
+				global $wpdb;
+
+				$block_name     = $block_type->name;
+				$search_pattern = '<!-- wp:' . $block_name . ' ';
+				$search_self_closing = '<!-- wp:' . $block_name . ' /-->';
+
+				if ( rest_is_field_included( 'usage_count', $fields ) ) {
+					$data['usage_count'] = (int) $wpdb->get_var(
+						$wpdb->prepare(
+							"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_content LIKE %s AND post_status = 'publish'",
+							'%' . $wpdb->esc_like( '<!-- wp:' . $block_name ) . '%'
+						)
+					);
+				}
+
+				if ( rest_is_field_included( 'most_used_in_post_type', $fields ) ) {
+					$results = $wpdb->get_results(
+						$wpdb->prepare(
+							"SELECT post_type, COUNT(*) as count FROM {$wpdb->posts} WHERE post_content LIKE %s AND post_status = 'publish' GROUP BY post_type ORDER BY count DESC LIMIT 1",
+							'%' . $wpdb->esc_like( '<!-- wp:' . $block_name ) . '%'
+						)
+					);
+
+					if ( ! empty( $results ) ) {
+						$data['most_used_in_post_type'] = $results[0]->post_type;
+					} else {
+						$data['most_used_in_post_type'] = null;
+					}
+				}
+			}
 		}
 
 		$context = ! empty( $request['context'] ) ? $request['context'] : 'view';
@@ -760,6 +801,18 @@ class WP_REST_Block_Types_Controller extends WP_REST_Controller {
 				),
 				'keywords'               => $keywords_definition,
 				'example'                => $example_definition,
+				'usage_count'            => array(
+					'description' => __( 'Number of published posts containing this block type.' ),
+					'type'        => 'integer',
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
+				),
+				'most_used_in_post_type' => array(
+					'description' => __( 'The post type where this block is most frequently used.' ),
+					'type'        => array( 'string', 'null' ),
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
+				),
 				'block_hooks'            => array(
 					'description'       => __( 'This block is automatically inserted near any occurrence of the block types used as keys of this map, into a relative position given by the corresponding value.' ),
 					'type'              => 'object',

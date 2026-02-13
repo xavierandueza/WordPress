@@ -64,7 +64,12 @@ class WP_REST_Post_Types_Controller extends WP_REST_Controller {
 					'callback'            => array( $this, 'get_item' ),
 					'permission_callback' => '__return_true',
 					'args'                => array(
-						'context' => $this->get_context_param( array( 'default' => 'view' ) ),
+						'context'        => $this->get_context_param( array( 'default' => 'view' ) ),
+						'include_counts' => array(
+							'description' => __( 'Include post count and recent activity for this post type.' ),
+							'type'        => 'boolean',
+							'default'     => false,
+						),
 					),
 				),
 				'schema' => array( $this, 'get_public_item_schema' ),
@@ -265,6 +270,35 @@ class WP_REST_Post_Types_Controller extends WP_REST_Controller {
 			$data['template_lock'] = ! empty( $post_type->template_lock ) ? $post_type->template_lock : false;
 		}
 
+		if ( rest_is_field_included( 'post_count', $fields ) || rest_is_field_included( 'recent_activity', $fields ) ) {
+			$include_counts = ! empty( $request['include_counts'] );
+
+			if ( $include_counts ) {
+				if ( rest_is_field_included( 'post_count', $fields ) ) {
+					$counts             = wp_count_posts( $post_type->name );
+					$data['post_count'] = isset( $counts->publish ) ? (int) $counts->publish : 0;
+				}
+
+				if ( rest_is_field_included( 'recent_activity', $fields ) ) {
+					$recent_posts = get_posts(
+						array(
+							'post_type'   => $post_type->name,
+							'numberposts' => 1,
+							'orderby'     => 'date',
+							'order'       => 'DESC',
+							'post_status' => 'publish',
+						)
+					);
+
+					if ( ! empty( $recent_posts ) ) {
+						$data['recent_activity'] = mysql2date( 'c', $recent_posts[0]->post_date_gmt, false );
+					} else {
+						$data['recent_activity'] = null;
+					}
+				}
+			}
+		}
+
 		$context = ! empty( $request['context'] ) ? $request['context'] : 'view';
 		$data    = $this->add_additional_fields_to_object( $data, $request );
 		$data    = $this->filter_response_by_context( $data, $context );
@@ -438,6 +472,19 @@ class WP_REST_Post_Types_Controller extends WP_REST_Controller {
 					'description' => __( 'The template_lock associated with the post type, or false if none.' ),
 					'readonly'    => true,
 					'context'     => array( 'view', 'edit', 'embed' ),
+				),
+				'post_count'     => array(
+					'description' => __( 'Number of published posts of this type.' ),
+					'type'        => 'integer',
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
+				),
+				'recent_activity' => array(
+					'description' => __( 'Date of the most recently published post of this type.' ),
+					'type'        => array( 'string', 'null' ),
+					'format'      => 'date-time',
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
 				),
 			),
 		);

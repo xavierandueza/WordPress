@@ -983,6 +983,13 @@ class WP_REST_Comments_Controller extends WP_REST_Controller {
 			}
 		}
 
+		if ( ! empty( $schema['properties']['sentiment'] ) && isset( $request['sentiment'] ) ) {
+			$valid_sentiments = array( 'positive', 'neutral', 'negative' );
+			if ( in_array( $request['sentiment'], $valid_sentiments, true ) ) {
+				update_comment_meta( $id, '_comment_sentiment', sanitize_text_field( $request['sentiment'] ) );
+			}
+		}
+
 		$fields_update = $this->update_additional_fields_for_object( $comment, $request );
 
 		if ( is_wp_error( $fields_update ) ) {
@@ -1202,6 +1209,22 @@ class WP_REST_Comments_Controller extends WP_REST_Controller {
 
 		if ( in_array( 'meta', $fields, true ) ) {
 			$data['meta'] = $this->meta->get_value( $comment->comment_ID, $request );
+		}
+
+		if ( in_array( 'content_length', $fields, true ) ) {
+			$plain_content         = wp_strip_all_tags( $comment->comment_content );
+			$data['content_length'] = mb_strlen( $plain_content );
+		}
+
+		if ( in_array( 'contains_links', $fields, true ) ) {
+			$has_link_tag          = ( stripos( $comment->comment_content, '<a' ) !== false );
+			$has_url_pattern       = (bool) preg_match( '#https?://[^\s<>"]+|www\.[^\s<>"]+#i', $comment->comment_content );
+			$data['contains_links'] = $has_link_tag || $has_url_pattern;
+		}
+
+		if ( in_array( 'sentiment', $fields, true ) ) {
+			$sentiment         = get_comment_meta( $comment->comment_ID, '_comment_sentiment', true );
+			$data['sentiment'] = ! empty( $sentiment ) ? $sentiment : 'neutral';
 		}
 
 		$context = ! empty( $request['context'] ) ? $request['context'] : 'view';
@@ -1639,6 +1662,27 @@ class WP_REST_Comments_Controller extends WP_REST_Controller {
 		}
 
 		$schema['properties']['meta'] = $this->meta->get_field_schema();
+
+		$schema['properties']['sentiment'] = array(
+			'description' => __( 'Sentiment classification of the comment.' ),
+			'type'        => 'string',
+			'enum'        => array( 'positive', 'neutral', 'negative' ),
+			'context'     => array( 'view', 'edit' ),
+		);
+
+		$schema['properties']['content_length'] = array(
+			'description' => __( 'Character count of the comment content.' ),
+			'type'        => 'integer',
+			'context'     => array( 'view', 'edit' ),
+			'readonly'    => true,
+		);
+
+		$schema['properties']['contains_links'] = array(
+			'description' => __( 'Whether the comment content contains links.' ),
+			'type'        => 'boolean',
+			'context'     => array( 'view', 'edit' ),
+			'readonly'    => true,
+		);
 
 		$this->schema = $schema;
 

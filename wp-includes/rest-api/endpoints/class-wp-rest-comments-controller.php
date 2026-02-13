@@ -820,6 +820,10 @@ class WP_REST_Comments_Controller extends WP_REST_Controller {
 			}
 		}
 
+		if ( isset( $request['priority'] ) ) {
+			update_comment_meta( $comment_id, '_comment_priority', sanitize_text_field( $request['priority'] ) );
+		}
+
 		$fields_update = $this->update_additional_fields_for_object( $comment, $request );
 
 		if ( is_wp_error( $fields_update ) ) {
@@ -981,6 +985,10 @@ class WP_REST_Comments_Controller extends WP_REST_Controller {
 			if ( is_wp_error( $meta_update ) ) {
 				return $meta_update;
 			}
+		}
+
+		if ( isset( $request['priority'] ) ) {
+			update_comment_meta( $id, '_comment_priority', sanitize_text_field( $request['priority'] ) );
 		}
 
 		$fields_update = $this->update_additional_fields_for_object( $comment, $request );
@@ -1202,6 +1210,15 @@ class WP_REST_Comments_Controller extends WP_REST_Controller {
 
 		if ( in_array( 'meta', $fields, true ) ) {
 			$data['meta'] = $this->meta->get_value( $comment->comment_ID, $request );
+		}
+
+		if ( in_array( 'priority', $fields, true ) ) {
+			$priority = get_comment_meta( $comment->comment_ID, '_comment_priority', true );
+			$data['priority'] = ! empty( $priority ) ? $priority : 'normal';
+		}
+
+		if ( in_array( 'word_count', $fields, true ) ) {
+			$data['word_count'] = str_word_count( wp_strip_all_tags( $comment->comment_content ) );
 		}
 
 		$context = ! empty( $request['context'] ) ? $request['context'] : 'view';
@@ -1637,6 +1654,24 @@ class WP_REST_Comments_Controller extends WP_REST_Controller {
 				'properties'  => $avatar_properties,
 			);
 		}
+
+		$schema['properties']['priority'] = array(
+			'description' => __( 'Editorial priority level for comment moderation workflow.' ),
+			'type'        => 'string',
+			'default'     => 'normal',
+			'enum'        => array( 'low', 'normal', 'high', 'urgent' ),
+			'context'     => array( 'view', 'edit' ),
+			'arg_options' => array(
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+		);
+
+		$schema['properties']['word_count'] = array(
+			'description' => __( 'Word count of the comment content.' ),
+			'type'        => 'integer',
+			'context'     => array( 'view', 'edit', 'embed' ),
+			'readonly'    => true,
+		);
 
 		$schema['properties']['meta'] = $this->meta->get_field_schema();
 

@@ -59,10 +59,15 @@ class WP_REST_Themes_Controller extends WP_REST_Controller {
 			sprintf( '/%s/(?P<stylesheet>%s)', $this->rest_base, self::PATTERN ),
 			array(
 				'args'   => array(
-					'stylesheet' => array(
+					'stylesheet'            => array(
 						'description'       => __( "The theme's stylesheet. This uniquely identifies the theme." ),
 						'type'              => 'string',
 						'sanitize_callback' => array( $this, '_sanitize_stylesheet_callback' ),
+					),
+					'include_color_palette' => array(
+						'description' => __( 'Include theme color palette and font families from theme.json.' ),
+						'type'        => 'boolean',
+						'default'     => false,
 					),
 				),
 				array(
@@ -359,6 +364,38 @@ class WP_REST_Themes_Controller extends WP_REST_Controller {
 
 		if ( rest_is_field_included( 'default_template_part_areas', $fields ) && $this->is_same_theme( $theme, $current_theme ) ) {
 			$data['default_template_part_areas'] = get_allowed_block_template_part_areas();
+		}
+
+		if ( rest_is_field_included( 'color_palette', $fields ) || rest_is_field_included( 'font_families', $fields ) ) {
+			$include_palette = ! empty( $request['include_color_palette'] );
+
+			if ( $include_palette ) {
+				$theme_json_file = $theme->get_file_path( 'theme.json' );
+
+				if ( $theme_json_file && file_exists( $theme_json_file ) ) {
+					$theme_json_content = file_get_contents( $theme_json_file );
+					$theme_json_data    = json_decode( $theme_json_content, true );
+
+					if ( rest_is_field_included( 'color_palette', $fields ) ) {
+						$data['color_palette'] = isset( $theme_json_data['settings']['color']['palette'] )
+							? $theme_json_data['settings']['color']['palette']
+							: array();
+					}
+
+					if ( rest_is_field_included( 'font_families', $fields ) ) {
+						$data['font_families'] = isset( $theme_json_data['settings']['typography']['fontFamilies'] )
+							? $theme_json_data['settings']['typography']['fontFamilies']
+							: array();
+					}
+				} else {
+					if ( rest_is_field_included( 'color_palette', $fields ) ) {
+						$data['color_palette'] = array();
+					}
+					if ( rest_is_field_included( 'font_families', $fields ) ) {
+						$data['font_families'] = array();
+					}
+				}
+			}
 		}
 
 		$data = $this->add_additional_fields_to_object( $data, $request );
@@ -687,6 +724,20 @@ class WP_REST_Themes_Controller extends WP_REST_Controller {
 					),
 				),
 			),
+		);
+
+		$schema['properties']['color_palette'] = array(
+			'description' => __( 'Color palette defined in the theme\'s theme.json file.' ),
+			'type'        => 'array',
+			'context'     => array( 'view', 'edit' ),
+			'readonly'    => true,
+		);
+
+		$schema['properties']['font_families'] = array(
+			'description' => __( 'Font families defined in the theme\'s theme.json file.' ),
+			'type'        => 'array',
+			'context'     => array( 'view', 'edit' ),
+			'readonly'    => true,
 		);
 
 		foreach ( get_registered_theme_features() as $feature => $config ) {

@@ -1026,6 +1026,10 @@ class WP_REST_Posts_Controller extends WP_REST_Controller {
 			}
 		}
 
+		if ( ! empty( $schema['properties']['editorial_note'] ) && isset( $request['editorial_note'] ) ) {
+			update_post_meta( $post_id, '_editorial_note', sanitize_text_field( $request['editorial_note'] ) );
+		}
+
 		$post          = get_post( $post_id );
 		$fields_update = $this->update_additional_fields_for_object( $post, $request );
 
@@ -2068,6 +2072,21 @@ class WP_REST_Posts_Controller extends WP_REST_Controller {
 			$data['meta'] = $this->meta->get_value( $post->ID, $request );
 		}
 
+		if ( rest_is_field_included( 'word_count', $fields ) ) {
+			$plain_content     = wp_strip_all_tags( $post->post_content );
+			$data['word_count'] = str_word_count( $plain_content );
+		}
+
+		if ( rest_is_field_included( 'estimated_reading_time', $fields ) ) {
+			$plain_content                = wp_strip_all_tags( $post->post_content );
+			$words                        = str_word_count( $plain_content );
+			$data['estimated_reading_time'] = max( 1, (int) ceil( $words / 250 ) );
+		}
+
+		if ( rest_is_field_included( 'editorial_note', $fields ) ) {
+			$data['editorial_note'] = (string) get_post_meta( $post->ID, '_editorial_note', true );
+		}
+
 		$taxonomies = wp_list_filter( get_object_taxonomies( $this->post_type, 'objects' ), array( 'show_in_rest' => true ) );
 
 		foreach ( $taxonomies as $taxonomy ) {
@@ -2698,6 +2717,26 @@ class WP_REST_Posts_Controller extends WP_REST_Controller {
 			'arg_options' => array(
 				'validate_callback' => array( $this, 'check_template' ),
 			),
+		);
+
+		$schema['properties']['editorial_note'] = array(
+			'description' => __( 'Editorial note for internal tracking of change reasons.' ),
+			'type'        => 'string',
+			'context'     => array( 'edit' ),
+		);
+
+		$schema['properties']['word_count'] = array(
+			'description' => __( 'Word count of the post content.' ),
+			'type'        => 'integer',
+			'context'     => array( 'view', 'edit' ),
+			'readonly'    => true,
+		);
+
+		$schema['properties']['estimated_reading_time'] = array(
+			'description' => __( 'Estimated reading time in minutes based on average reading speed.' ),
+			'type'        => 'integer',
+			'context'     => array( 'view', 'edit' ),
+			'readonly'    => true,
 		);
 
 		$taxonomies = wp_list_filter( get_object_taxonomies( $this->post_type, 'objects' ), array( 'show_in_rest' => true ) );

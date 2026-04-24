@@ -836,6 +836,10 @@ class WP_REST_Users_Controller extends WP_REST_Controller {
 			}
 		}
 
+		if ( ! empty( $schema['properties']['timezone'] ) && isset( $request['timezone'] ) ) {
+			update_user_meta( $id, '_user_timezone', sanitize_text_field( $request['timezone'] ) );
+		}
+
 		$user          = get_user_by( 'id', $user_id );
 		$fields_update = $this->update_additional_fields_for_object( $user, $request );
 
@@ -1116,6 +1120,24 @@ class WP_REST_Users_Controller extends WP_REST_Controller {
 
 		if ( in_array( 'meta', $fields, true ) ) {
 			$data['meta'] = $this->meta->get_value( $user->ID, $request );
+		}
+
+		if ( in_array( 'account_age_days', $fields, true ) ) {
+			$registered_timestamp     = strtotime( $user->user_registered );
+			$data['account_age_days'] = (int) floor( ( time() - $registered_timestamp ) / DAY_IN_SECONDS );
+		}
+
+		if ( in_array( 'last_active', $fields, true ) ) {
+			$last_active = get_user_meta( $user->ID, '_last_active', true );
+			if ( $last_active ) {
+				$data['last_active'] = mysql2date( 'c', $last_active, false );
+			} else {
+				$data['last_active'] = mysql2date( 'c', $user->user_registered, false );
+			}
+		}
+
+		if ( in_array( 'timezone', $fields, true ) ) {
+			$data['timezone'] = (string) get_user_meta( $user->ID, '_user_timezone', true );
 		}
 
 		$context = ! empty( $request['context'] ) ? $request['context'] : 'embed';
@@ -1521,6 +1543,24 @@ class WP_REST_Users_Controller extends WP_REST_Controller {
 					'description' => __( 'Any extra capabilities assigned to the user.' ),
 					'type'        => 'object',
 					'context'     => array( 'edit' ),
+					'readonly'    => true,
+				),
+				'timezone'           => array(
+					'description' => __( 'The user\'s preferred timezone identifier.' ),
+					'type'        => 'string',
+					'context'     => array( 'view', 'edit' ),
+				),
+				'account_age_days'   => array(
+					'description' => __( 'Number of days since the user account was created.' ),
+					'type'        => 'integer',
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
+				),
+				'last_active'        => array(
+					'description' => __( 'Timestamp of the user\'s last recorded activity.' ),
+					'type'        => 'string',
+					'format'      => 'date-time',
+					'context'     => array( 'view', 'edit' ),
 					'readonly'    => true,
 				),
 			),

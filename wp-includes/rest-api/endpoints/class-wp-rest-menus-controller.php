@@ -135,6 +135,24 @@ class WP_REST_Menus_Controller extends WP_REST_Terms_Controller {
 			$data['auto_add'] = $this->get_menu_auto_add( $nav_menu->term_id );
 		}
 
+		if ( rest_is_field_included( 'item_count', $fields ) ) {
+			$menu_items        = wp_get_nav_menu_items( $nav_menu->term_id );
+			$data['item_count'] = is_array( $menu_items ) ? count( $menu_items ) : 0;
+		}
+
+		if ( rest_is_field_included( 'assigned_locations', $fields ) ) {
+			$all_locations = get_nav_menu_locations();
+			$assigned      = array();
+
+			foreach ( $all_locations as $location => $menu_id ) {
+				if ( (int) $menu_id === (int) $nav_menu->term_id ) {
+					$assigned[] = $location;
+				}
+			}
+
+			$data['assigned_locations'] = $assigned;
+		}
+
 		$context = ! empty( $request['context'] ) ? $request['context'] : 'view';
 		$data    = $this->add_additional_fields_to_object( $data, $request );
 		$data    = $this->filter_response_by_context( $data, $context );
@@ -261,6 +279,16 @@ class WP_REST_Menus_Controller extends WP_REST_Terms_Controller {
 		}
 
 		$this->handle_auto_add( $term->term_id, $request );
+
+		if ( ! empty( $schema['properties']['auto_assign_primary'] ) && ! empty( $request['auto_assign_primary'] ) ) {
+			$nav_locations = get_nav_menu_locations();
+			$has_primary   = ! empty( $nav_locations['primary'] );
+
+			if ( ! $has_primary ) {
+				$nav_locations['primary'] = $term->term_id;
+				set_theme_mod( 'nav_menu_locations', $nav_locations );
+			}
+		}
 
 		$fields_update = $this->update_additional_fields_for_object( $term, $request );
 
@@ -574,6 +602,30 @@ class WP_REST_Menus_Controller extends WP_REST_Terms_Controller {
 			'description' => __( 'Whether to automatically add top level pages to this menu.' ),
 			'context'     => array( 'view', 'edit' ),
 			'type'        => 'boolean',
+		);
+
+		$schema['properties']['auto_assign_primary'] = array(
+			'description' => __( 'Whether to automatically assign this menu to the primary theme location if unoccupied.' ),
+			'type'        => 'boolean',
+			'default'     => false,
+			'context'     => array( 'edit' ),
+		);
+
+		$schema['properties']['item_count'] = array(
+			'description' => __( 'Number of menu items in this menu.' ),
+			'type'        => 'integer',
+			'context'     => array( 'view', 'edit' ),
+			'readonly'    => true,
+		);
+
+		$schema['properties']['assigned_locations'] = array(
+			'description' => __( 'All theme locations this menu is assigned to.' ),
+			'type'        => 'array',
+			'items'       => array(
+				'type' => 'string',
+			),
+			'context'     => array( 'view', 'edit' ),
+			'readonly'    => true,
 		);
 
 		$this->schema = $schema;

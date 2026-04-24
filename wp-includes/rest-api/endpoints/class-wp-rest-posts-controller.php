@@ -2105,6 +2105,24 @@ class WP_REST_Posts_Controller extends WP_REST_Controller {
 			}
 		}
 
+		if ( rest_is_field_included( 'reading_time', $fields ) ) {
+			$content       = wp_strip_all_tags( $post->post_content );
+			$word_count    = str_word_count( $content );
+			$reading_speed = isset( $request['reading_speed'] ) ? (int) $request['reading_speed'] : 250;
+			$reading_speed = max( 1, $reading_speed );
+			$data['reading_time'] = (int) ceil( $word_count / $reading_speed );
+		}
+
+		if ( rest_is_field_included( 'content_summary', $fields ) ) {
+			$stripped = wp_strip_all_tags( $post->post_content );
+			$stripped = trim( preg_replace( '/\s+/', ' ', $stripped ) );
+			if ( strlen( $stripped ) > 160 ) {
+				$data['content_summary'] = substr( $stripped, 0, 157 ) . '...';
+			} else {
+				$data['content_summary'] = $stripped;
+			}
+		}
+
 		$context = ! empty( $request['context'] ) ? $request['context'] : 'view';
 		$data    = $this->add_additional_fields_to_object( $data, $request );
 		$data    = $this->filter_response_by_context( $data, $context );
@@ -2700,6 +2718,20 @@ class WP_REST_Posts_Controller extends WP_REST_Controller {
 			),
 		);
 
+		$schema['properties']['reading_time'] = array(
+			'description' => __( 'Estimated reading time for the post content in minutes.' ),
+			'type'        => 'integer',
+			'context'     => array( 'view', 'edit', 'embed' ),
+			'readonly'    => true,
+		);
+
+		$schema['properties']['content_summary'] = array(
+			'description' => __( 'Auto-generated plain-text summary of the post content.' ),
+			'type'        => 'string',
+			'context'     => array( 'view', 'edit', 'embed' ),
+			'readonly'    => true,
+		);
+
 		$taxonomies = wp_list_filter( get_object_taxonomies( $this->post_type, 'objects' ), array( 'show_in_rest' => true ) );
 
 		foreach ( $taxonomies as $taxonomy ) {
@@ -3101,6 +3133,13 @@ class WP_REST_Posts_Controller extends WP_REST_Controller {
 				),
 			);
 		}
+
+		$query_params['reading_speed'] = array(
+			'description' => __( 'Words per minute rate used to calculate reading time. Default 250.' ),
+			'type'        => 'integer',
+			'default'     => 250,
+			'minimum'     => 1,
+		);
 
 		/**
 		 * Filters collection parameters for the posts controller.

@@ -221,6 +221,14 @@ class WP_REST_Attachments_Controller extends WP_REST_Posts_Controller {
 			update_post_meta( $attachment_id, '_wp_attachment_image_alt', sanitize_text_field( $request['alt_text'] ) );
 		}
 
+		if ( isset( $request['focal_point'] ) ) {
+			$focal_point = array(
+				'x' => floatval( $request['focal_point']['x'] ),
+				'y' => floatval( $request['focal_point']['y'] ),
+			);
+			update_post_meta( $attachment_id, '_wp_attachment_focal_point', $focal_point );
+		}
+
 		if ( ! empty( $schema['properties']['featured_media'] ) && isset( $request['featured_media'] ) ) {
 			$thumbnail_update = $this->handle_featured_media( $request['featured_media'], $attachment_id );
 
@@ -467,6 +475,14 @@ class WP_REST_Attachments_Controller extends WP_REST_Posts_Controller {
 
 		if ( isset( $request['alt_text'] ) ) {
 			update_post_meta( $data['id'], '_wp_attachment_image_alt', $request['alt_text'] );
+		}
+
+		if ( isset( $request['focal_point'] ) ) {
+			$focal_point = array(
+				'x' => floatval( $request['focal_point']['x'] ),
+				'y' => floatval( $request['focal_point']['y'] ),
+			);
+			update_post_meta( $data['id'], '_wp_attachment_focal_point', $focal_point );
 		}
 
 		$attachment = get_post( $request['id'] );
@@ -929,6 +945,26 @@ class WP_REST_Attachments_Controller extends WP_REST_Posts_Controller {
 			$data['alt_text'] = get_post_meta( $post->ID, '_wp_attachment_image_alt', true );
 		}
 
+		if ( in_array( 'focal_point', $fields, true ) ) {
+			$focal_point = get_post_meta( $post->ID, '_wp_attachment_focal_point', true );
+			$data['focal_point'] = ! empty( $focal_point ) ? $focal_point : array( 'x' => 0.5, 'y' => 0.5 );
+		}
+
+		if ( in_array( 'accessibility_status', $fields, true ) ) {
+			$alt   = get_post_meta( $post->ID, '_wp_attachment_image_alt', true );
+			$cap   = $post->post_excerpt;
+			$desc  = $post->post_content;
+			$count = ( ! empty( $alt ) ? 1 : 0 ) + ( ! empty( $cap ) ? 1 : 0 ) + ( ! empty( $desc ) ? 1 : 0 );
+
+			if ( 3 === $count ) {
+				$data['accessibility_status'] = 'complete';
+			} elseif ( $count > 0 ) {
+				$data['accessibility_status'] = 'partial';
+			} else {
+				$data['accessibility_status'] = 'missing';
+			}
+		}
+
 		if ( in_array( 'media_type', $fields, true ) ) {
 			$data['media_type'] = wp_attachment_is_image( $post->ID ) ? 'image' : 'file';
 		}
@@ -1067,6 +1103,38 @@ class WP_REST_Attachments_Controller extends WP_REST_Posts_Controller {
 			'arg_options' => array(
 				'sanitize_callback' => 'sanitize_text_field',
 			),
+		);
+
+		$schema['properties']['focal_point'] = array(
+			'description' => __( 'Focal point for smart image cropping, as an object with x and y coordinates from 0 to 1.' ),
+			'type'        => 'object',
+			'context'     => array( 'view', 'edit', 'embed' ),
+			'properties'  => array(
+				'x' => array(
+					'description' => __( 'Horizontal position from 0 (left) to 1 (right).' ),
+					'type'        => 'number',
+					'minimum'     => 0,
+					'maximum'     => 1,
+				),
+				'y' => array(
+					'description' => __( 'Vertical position from 0 (top) to 1 (bottom).' ),
+					'type'        => 'number',
+					'minimum'     => 0,
+					'maximum'     => 1,
+				),
+			),
+			'arg_options' => array(
+				'sanitize_callback' => null,
+				'validate_callback' => null,
+			),
+		);
+
+		$schema['properties']['accessibility_status'] = array(
+			'description' => __( 'Accessibility completeness based on alt text, caption, and description.' ),
+			'type'        => 'string',
+			'enum'        => array( 'complete', 'partial', 'missing' ),
+			'context'     => array( 'view', 'edit', 'embed' ),
+			'readonly'    => true,
 		);
 
 		$schema['properties']['caption'] = array(

@@ -211,6 +211,28 @@ class WP_REST_Themes_Controller extends WP_REST_Controller {
 			$themes[] = $this->prepare_response_for_collection( $prepared );
 		}
 
+		if ( ! empty( $request['sort'] ) ) {
+			$sort_field = $request['sort'];
+			usort( $themes, function ( $a, $b ) use ( $sort_field ) {
+				switch ( $sort_field ) {
+					case 'name':
+						$a_val = isset( $a['name']['raw'] ) ? $a['name']['raw'] : '';
+						$b_val = isset( $b['name']['raw'] ) ? $b['name']['raw'] : '';
+						return strnatcasecmp( $a_val, $b_val );
+					case 'author':
+						$a_val = isset( $a['author']['raw'] ) ? $a['author']['raw'] : '';
+						$b_val = isset( $b['author']['raw'] ) ? $b['author']['raw'] : '';
+						return strnatcasecmp( $a_val, $b_val );
+					case 'version':
+						$a_val = isset( $a['version'] ) ? $a['version'] : '0';
+						$b_val = isset( $b['version'] ) ? $b['version'] : '0';
+						return version_compare( $a_val, $b_val );
+					default:
+						return 0;
+				}
+			});
+		}
+
 		$response = rest_ensure_response( $themes );
 
 		$response->header( 'X-WP-Total', count( $themes ) );
@@ -359,6 +381,28 @@ class WP_REST_Themes_Controller extends WP_REST_Controller {
 
 		if ( rest_is_field_included( 'default_template_part_areas', $fields ) && $this->is_same_theme( $theme, $current_theme ) ) {
 			$data['default_template_part_areas'] = get_allowed_block_template_part_areas();
+		}
+
+		if ( rest_is_field_included( 'compatibility_status', $fields ) ) {
+			$compatibility = array(
+				'php' => 'unknown',
+				'wp'  => 'unknown',
+			);
+
+			$requires_php = $theme->get( 'RequiresPHP' );
+			if ( $requires_php ) {
+				$compatibility['php'] = version_compare( phpversion(), $requires_php, '>=' )
+					? 'compatible' : 'incompatible';
+			}
+
+			$requires_wp = $theme->get( 'RequiresWP' );
+			if ( $requires_wp ) {
+				global $wp_version;
+				$compatibility['wp'] = version_compare( $wp_version, $requires_wp, '>=' )
+					? 'compatible' : 'incompatible';
+			}
+
+			$data['compatibility_status'] = $compatibility;
 		}
 
 		$data = $this->add_additional_fields_to_object( $data, $request );
@@ -686,6 +730,24 @@ class WP_REST_Themes_Controller extends WP_REST_Controller {
 						),
 					),
 				),
+				'compatibility_status'        => array(
+					'description' => __( 'Compatibility status of the theme with the current environment.' ),
+					'type'        => 'object',
+					'readonly'    => true,
+					'context'     => array( 'view', 'edit' ),
+					'properties'  => array(
+						'php' => array(
+							'description' => __( 'PHP version compatibility: compatible, incompatible, or unknown.' ),
+							'type'        => 'string',
+							'enum'        => array( 'compatible', 'incompatible', 'unknown' ),
+						),
+						'wp'  => array(
+							'description' => __( 'WordPress version compatibility: compatible, incompatible, or unknown.' ),
+							'type'        => 'string',
+							'enum'        => array( 'compatible', 'incompatible', 'unknown' ),
+						),
+					),
+				),
 			),
 		);
 
@@ -721,6 +783,12 @@ class WP_REST_Themes_Controller extends WP_REST_Controller {
 					'type' => 'string',
 				),
 			),
+		);
+
+		$query_params['sort'] = array(
+			'description' => __( 'Sort the result set by the given field.' ),
+			'type'        => 'string',
+			'enum'        => array( 'name', 'author', 'version' ),
 		);
 
 		/**

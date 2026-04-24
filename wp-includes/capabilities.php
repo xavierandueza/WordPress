@@ -797,14 +797,6 @@ function map_meta_cap( $cap, $user_id, ...$args ) {
 		case 'manage_privacy_options':
 			$caps[] = is_multisite() ? 'manage_network' : 'manage_options';
 			break;
-		case 'create_app_password':
-		case 'list_app_passwords':
-		case 'read_app_password':
-		case 'edit_app_password':
-		case 'delete_app_passwords':
-		case 'delete_app_password':
-			$caps = map_meta_cap( 'edit_user', $user_id, $args[0] );
-			break;
 		case 'edit_block_binding':
 			$block_editor_context = $args[0];
 			if ( isset( $block_editor_context->post ) ) {

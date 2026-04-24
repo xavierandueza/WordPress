@@ -316,13 +316,6 @@ function create_initial_rest_routes() {
 	$controller = new WP_REST_Users_Controller();
 	$controller->register_routes();
 
-	// Application Passwords
-	$controller = new WP_REST_Application_Passwords_Controller();
-	$controller->register_routes();
-
-	// Comments.
-	$controller = new WP_REST_Comments_Controller();
-	$controller->register_routes();
 
 	$search_handlers = array(
 		new WP_REST_Post_Search_Handler(),
@@ -392,14 +385,6 @@ function create_initial_rest_routes() {
 	$controller = new WP_REST_Block_Pattern_Categories_Controller();
 	$controller->register_routes();
 
-	// Site Health.
-	$site_health = WP_Site_Health::get_instance();
-	$controller  = new WP_REST_Site_Health_Controller( $site_health );
-	$controller->register_routes();
-
-	// URL Details.
-	$controller = new WP_REST_URL_Details_Controller();
-	$controller->register_routes();
 
 	// Menu Locations.
 	$controller = new WP_REST_Menu_Locations_Controller();

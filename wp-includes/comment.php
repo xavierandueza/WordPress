@@ -568,6 +568,214 @@ function update_comment_meta( $comment_id, $meta_key, $meta_value, $prev_value =
 }
 
 /**
+ * Pins a comment.
+ *
+ * Sets the `_pinned` comment meta to record the date the comment was pinned.
+ * Only one `_pinned` meta entry is stored per comment.
+ *
+ * @since 6.8.0
+ *
+ * @param int $comment_id Comment ID.
+ * @return true|WP_Error True on success, WP_Error on failure.
+ */
+function wp_pin_comment( $comment_id ) {
+	$comment = get_comment( $comment_id );
+
+	if ( ! $comment ) {
+		return new WP_Error( 'invalid_comment', __( 'Invalid comment ID.' ), array( 'status' => 404 ) );
+	}
+
+	if ( wp_is_comment_pinned( $comment_id ) ) {
+		return new WP_Error( 'already_pinned', __( 'This comment is already pinned.' ), array( 'status' => 400 ) );
+	}
+
+	$result = add_comment_meta( $comment_id, '_pinned', current_time( 'mysql' ), true );
+
+	if ( ! $result ) {
+		return new WP_Error( 'pin_failed', __( 'Could not pin the comment.' ), array( 'status' => 500 ) );
+	}
+
+	/**
+	 * Fires after a comment has been pinned.
+	 *
+	 * @since 6.8.0
+	 *
+	 * @param int $comment_id The pinned comment ID.
+	 */
+	do_action( 'comment_pinned', $comment_id );
+
+	return true;
+}
+
+/**
+ * Unpins a comment.
+ *
+ * Removes the `_pinned` comment meta entry for the given comment.
+ *
+ * @since 6.8.0
+ *
+ * @param int $comment_id Comment ID.
+ * @return true|WP_Error True on success, WP_Error on failure.
+ */
+function wp_unpin_comment( $comment_id ) {
+	$comment = get_comment( $comment_id );
+
+	if ( ! $comment ) {
+		return new WP_Error( 'invalid_comment', __( 'Invalid comment ID.' ), array( 'status' => 404 ) );
+	}
+
+	if ( ! wp_is_comment_pinned( $comment_id ) ) {
+		return new WP_Error( 'not_pinned', __( 'This comment is not pinned.' ), array( 'status' => 400 ) );
+	}
+
+	$result = delete_comment_meta( $comment_id, '_pinned' );
+
+	if ( ! $result ) {
+		return new WP_Error( 'unpin_failed', __( 'Could not unpin the comment.' ), array( 'status' => 500 ) );
+	}
+
+	/**
+	 * Fires after a comment has been unpinned.
+	 *
+	 * @since 6.8.0
+	 *
+	 * @param int $comment_id The unpinned comment ID.
+	 */
+	do_action( 'comment_unpinned', $comment_id );
+
+	return true;
+}
+
+/**
+ * Checks whether a comment is pinned.
+ *
+ * @since 6.8.0
+ *
+ * @param int $comment_id Comment ID.
+ * @return bool True if the comment is pinned, false otherwise.
+ */
+function wp_is_comment_pinned( $comment_id ) {
+	return (bool) get_comment_meta( $comment_id, '_pinned', true );
+}
+
+/**
+ * Reports a comment.
+ *
+ * Stores a report from a specific user against a comment. Each user may only
+ * report a given comment once. A running `_report_count` meta is maintained
+ * for efficient queries.
+ *
+ * @since 6.8.0
+ *
+ * @param int    $comment_id Comment ID.
+ * @param int    $user_id    ID of the user filing the report.
+ * @param string $reason     Report reason. Accepts 'spam', 'abuse', 'off-topic', 'other'.
+ *                           Default 'other'.
+ * @return true|WP_Error True on success, WP_Error on failure.
+ */
+function wp_report_comment( $comment_id, $user_id, $reason = 'other' ) {
+	$comment = get_comment( $comment_id );
+
+	if ( ! $comment ) {
+		return new WP_Error( 'invalid_comment', __( 'Invalid comment ID.' ), array( 'status' => 404 ) );
+	}
+
+	if ( wp_has_user_reported_comment( $comment_id, $user_id ) ) {
+		return new WP_Error( 'already_reported', __( 'You have already reported this comment.' ), array( 'status' => 400 ) );
+	}
+
+	$valid_reasons = array( 'spam', 'abuse', 'off-topic', 'other' );
+	if ( ! in_array( $reason, $valid_reasons, true ) ) {
+		$reason = 'other';
+	}
+
+	$report_data = array(
+		'reason' => $reason,
+		'date'   => current_time( 'mysql' ),
+	);
+
+	$result = add_comment_meta( $comment_id, '_report_' . (int) $user_id, $report_data );
+
+	if ( ! $result ) {
+		return new WP_Error( 'report_failed', __( 'Could not report the comment.' ), array( 'status' => 500 ) );
+	}
+
+	// Increment report count.
+	$current_count = (int) get_comment_meta( $comment_id, '_report_count', true );
+	update_comment_meta( $comment_id, '_report_count', $current_count + 1 );
+
+	/**
+	 * Fires after a comment has been reported.
+	 *
+	 * @since 6.8.0
+	 *
+	 * @param int    $comment_id The reported comment ID.
+	 * @param int    $user_id    The ID of the user who filed the report.
+	 * @param string $reason     The reason for the report.
+	 */
+	do_action( 'comment_reported', $comment_id, $user_id, $reason );
+
+	return true;
+}
+
+/**
+ * Retrieves all reports for a comment.
+ *
+ * @since 6.8.0
+ *
+ * @param int $comment_id Comment ID.
+ * @return array Array of report objects, each containing 'user_id', 'reason', and 'date'.
+ */
+function wp_get_comment_reports( $comment_id ) {
+	$all_meta = get_comment_meta( $comment_id );
+
+	if ( ! $all_meta ) {
+		return array();
+	}
+
+	$reports = array();
+
+	foreach ( $all_meta as $meta_key => $meta_values ) {
+		if ( 0 !== strpos( $meta_key, '_report_' ) || '_report_count' === $meta_key ) {
+			continue;
+		}
+
+		$user_id = (int) substr( $meta_key, strlen( '_report_' ) );
+
+		if ( ! $user_id ) {
+			continue;
+		}
+
+		$report_data = maybe_unserialize( $meta_values[0] );
+
+		if ( ! is_array( $report_data ) ) {
+			continue;
+		}
+
+		$reports[] = array(
+			'user_id' => $user_id,
+			'reason'  => isset( $report_data['reason'] ) ? $report_data['reason'] : 'other',
+			'date'    => isset( $report_data['date'] ) ? $report_data['date'] : '',
+		);
+	}
+
+	return $reports;
+}
+
+/**
+ * Checks whether a user has already reported a comment.
+ *
+ * @since 6.8.0
+ *
+ * @param int $comment_id Comment ID.
+ * @param int $user_id    User ID.
+ * @return bool True if the user has reported the comment, false otherwise.
+ */
+function wp_has_user_reported_comment( $comment_id, $user_id ) {
+	return (bool) get_comment_meta( $comment_id, '_report_' . (int) $user_id, true );
+}
+
+/**
  * Sets the cookies used to store an unauthenticated commentator's identity. Typically used
  * to recall previous comments by this commentator that are still held in moderation.
  *

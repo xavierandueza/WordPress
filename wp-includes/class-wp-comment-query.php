@@ -926,6 +926,28 @@ class WP_Comment_Query {
 			$this->sql_clauses['where']['date_query'] = preg_replace( '/^\s*AND\s*/', '', $this->date_query->get_sql() );
 		}
 
+		// Join the commentmeta table for pinned comment ordering.
+		$ordersby = is_array( $this->query_vars['orderby'] )
+			? $this->query_vars['orderby']
+			: preg_split( '/[,\s]/', $this->query_vars['orderby'] );
+
+		$needs_pinned_join = false;
+		foreach ( $ordersby as $_key => $_value ) {
+			$_orderby = is_int( $_key ) ? $_value : $_key;
+			if ( 'comment_pinned' === $_orderby ) {
+				$needs_pinned_join = true;
+				break;
+			}
+		}
+
+		if ( $needs_pinned_join ) {
+			$join .= " LEFT JOIN $wpdb->commentmeta AS pinned_meta ON ( $wpdb->comments.comment_ID = pinned_meta.comment_id AND pinned_meta.meta_key = '_pinned' )";
+
+			if ( ! $this->query_vars['count'] ) {
+				$groupby = "{$wpdb->comments}.comment_ID";
+			}
+		}
+
 		$where = implode( ' AND ', $this->sql_clauses['where'] );
 
 		$pieces = array( 'fields', 'join', 'where', 'orderby', 'limits', 'groupby' );
@@ -1221,6 +1243,8 @@ class WP_Comment_Query {
 		} elseif ( 'comment__in' === $orderby ) {
 			$comment__in = implode( ',', array_map( 'absint', $this->query_vars['comment__in'] ) );
 			$parsed      = "FIELD( {$wpdb->comments}.comment_ID, $comment__in )";
+		} elseif ( 'comment_pinned' === $orderby ) {
+			$parsed = "CASE WHEN pinned_meta.meta_value IS NOT NULL THEN 0 ELSE 1 END";
 		} elseif ( in_array( $orderby, $allowed_keys, true ) ) {
 
 			if ( isset( $meta_query_clauses[ $orderby ] ) ) {

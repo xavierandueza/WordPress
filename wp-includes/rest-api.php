@@ -424,6 +424,105 @@ function create_initial_rest_routes() {
 	$abilities_run_controller->register_routes();
 	$abilities_list_controller = new WP_REST_Abilities_V1_List_Controller();
 	$abilities_list_controller->register_routes();
+
+	// Forms.
+	$forms_controller = new WP_REST_Forms_Controller();
+	$forms_controller->register_routes();
+
+	$form_fields_controller = new WP_REST_Form_Fields_Controller();
+	$form_fields_controller->register_routes();
+
+	$form_submissions_controller = new WP_REST_Form_Submissions_Controller();
+	$form_submissions_controller->register_routes();
+
+	$form_notifications_controller = new WP_REST_Form_Notifications_Controller();
+	$form_notifications_controller->register_routes();
+
+	$form_analytics_controller = new WP_REST_Form_Analytics_Controller();
+	$form_analytics_controller->register_routes();
+
+	// Register form meta fields.
+	register_post_meta(
+		'form',
+		'_form_version',
+		array(
+			'type'         => 'integer',
+			'single'       => true,
+			'show_in_rest' => true,
+			'default'      => 1,
+		)
+	);
+
+	register_post_meta(
+		'form',
+		'_form_settings',
+		array(
+			'type'         => 'object',
+			'single'       => true,
+			'show_in_rest' => array(
+				'schema' => array(
+					'type'       => 'object',
+					'properties' => array(
+						'redirect_url'       => array( 'type' => 'string' ),
+						'submit_button_text' => array( 'type' => 'string' ),
+						'success_message'    => array( 'type' => 'string' ),
+					),
+				),
+			),
+		)
+	);
+
+	register_post_meta(
+		'form',
+		'_form_fields',
+		array(
+			'type'         => 'array',
+			'single'       => true,
+			'show_in_rest' => array(
+				'schema' => array(
+					'type'  => 'array',
+					'items' => array( 'type' => 'object' ),
+				),
+			),
+		)
+	);
+
+	register_post_meta(
+		'form',
+		'_form_notifications',
+		array(
+			'type'         => 'array',
+			'single'       => true,
+			'show_in_rest' => array(
+				'schema' => array(
+					'type'  => 'array',
+					'items' => array( 'type' => 'object' ),
+				),
+			),
+		)
+	);
+
+	register_post_meta(
+		'form',
+		'_submission_count',
+		array(
+			'type'         => 'integer',
+			'single'       => true,
+			'show_in_rest' => true,
+			'default'      => 0,
+		)
+	);
+
+	register_post_meta(
+		'form',
+		'_form_status',
+		array(
+			'type'         => 'string',
+			'single'       => true,
+			'show_in_rest' => true,
+			'default'      => 'active',
+		)
+	);
 }
 
 /**

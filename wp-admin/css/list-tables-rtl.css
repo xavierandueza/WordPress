@@ -854,8 +854,9 @@ p.pagenav {
 	color: #a7aaad;
 	font-size: 13px;
 	padding: 2px 0 0;
-	position: relative;
-	right: -9999em;
+	visibility: hidden;
+	opacity: 0;
+	transition: opacity 0.15s ease-in-out, visibility 0.15s ease-in-out;
 }
 
 /* ticket #34150 */
@@ -870,15 +871,75 @@ p.pagenav {
 
 .no-js .row-actions,
 tr:hover .row-actions,
+tr:focus-within .row-actions,
 .mobile .row-actions,
 .row-actions.visible,
 .comment-item:hover .row-actions {
-	position: static;
+	visibility: visible;
+	opacity: 1;
+}
+
+.row-actions a {
+	padding: 2px 4px;
+	border-radius: 3px;
+	transition: background-color 0.1s ease;
+}
+
+.row-actions a:hover {
+	background-color: #f0f0f1;
+	color: #135e96;
+}
+
+.row-actions a:focus {
+	box-shadow: 0 0 0 1px #2271b1;
 }
 
 /* deprecated */
 .row-actions-visible {
 	padding: 2px 0 0;
+}
+
+/* Post status badges */
+.post-state {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 12px;
+	font-weight: 500;
+	background: #f0f0f1;
+	line-height: 1.6;
+}
+
+.post-state--draft {
+	background: #f0c33c;
+	color: #614d00;
+}
+
+.post-state--pending {
+	background: #f0b849;
+	color: #614d00;
+}
+
+.post-state--future {
+	background: #2271b1;
+	color: #fff;
+}
+
+.post-state--private,
+.post-state--protected {
+	background: #dcdcde;
+}
+
+.post-state--sticky {
+	background: #d63638;
+	color: #fff;
+}
+
+.post-state--page_on_front,
+.post-state--page_for_posts,
+.post-state--page_for_privacy_policy {
+	background: #2271b1;
+	color: #fff;
 }
 
 
@@ -914,9 +975,11 @@ tr.inline-edit-row td {
 
 .inline-edit-wrapper {
 	display: flow-root;
-	padding: 0 12px;
-	border: 1px solid transparent;
+	padding: 4px 16px 8px;
+	border: 1px solid #c3c4c7;
 	border-radius: 4px;
+	background: #f9f9f9;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .inline-edit-wrapper:focus {
@@ -975,7 +1038,9 @@ tr.inline-edit-row td {
 	align-items: center;
 	clear: both;
 	margin: 0;
+	margin-top: 0.5em;
 	padding: 0.5em 0 1em;
+	border-top: 1px solid #dcdcde;
 }
 
 .inline-edit-save.submit .button {
@@ -1003,9 +1068,11 @@ tr.inline-edit-row td {
 /* Needs higher specificity for the padding */
 #the-list .inline-edit-row .inline-edit-legend {
 	margin: 0;
-	padding: 0.2em 0;
+	margin-bottom: 0.3em;
+	padding: 0.3em 0;
 	line-height: 2.5;
 	font-weight: 600;
+	border-bottom: 1px solid #dcdcde;
 }
 
 .inline-edit-row fieldset span.title,
@@ -1017,7 +1084,7 @@ tr.inline-edit-row td {
 .inline-edit-row fieldset label,
 .inline-edit-row fieldset span.inline-edit-categories-label {
 	display: block;
-	margin: .2em 0;
+	margin: .3em 0;
 	line-height: 2.5;
 }
 
@@ -1147,10 +1214,12 @@ tr.inline-edit-row td {
 #bulk-titles,
 ul.cat-checklist {
 	height: 14em;
-	border: 1px solid #ddd;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
 	margin: 0 0 5px;
-	padding: 0.2em 5px;
+	padding: 4px 8px;
 	overflow-y: scroll;
+	background: #fff;
 }
 
 ul.cat-checklist input[name="post_category[]"]:indeterminate::before {
